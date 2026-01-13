@@ -94,32 +94,33 @@
 
             try {
                 toggleUI(true);
-                updateStatus("Scanning for BLE Peripheral...");
+                updateStatus("Scanning for all devices...");
 
+                // BRINGING BACK: Show all devices
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: [SERVICE_UUID] }],
-                    optionalServices: [SERVICE_UUID]
+                    acceptAllDevices: true, 
+                    optionalServices: [SERVICE_UUID] // Still required to access our service
                 });
 
                 updateStatus("Establishing GATT Connection...");
                 const server = await device.gatt.connect();
 
-                updateStatus("Discovering Primary Service...");
+                updateStatus("Discovering Services...");
+                // Note: getPrimaryService might fail if the script is still setting up
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 
                 updateStatus("Locating Characteristic...");
                 const characteristic = await service.getCharacteristic(CHAR_UUID);
 
-                updateStatus("Writing Data (No-Response Mode)...");
+                updateStatus("Writing Data...");
                 const data = JSON.stringify({ ssid, pass });
                 const encoder = new TextEncoder();
                 
-                // FIX: Use writeValueWithoutResponse to prevent the "GATT operation failed" error
+                // Keep the 'without response' fix to avoid the GATT error
                 await characteristic.writeValueWithoutResponse(encoder.encode(data));
 
                 updateStatus("SUCCESS: Broadcast Complete", "#00ffff");
                 
-                // Auto-disconnect to let the Pi reset its BT stack
                 setTimeout(() => device.gatt.disconnect(), 1000);
                 toggleUI(false);
 
