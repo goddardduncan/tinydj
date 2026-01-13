@@ -1,63 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pi Setup</title>
-    <style>
-        :root { --g-blue: #4285f4; --text: #3c4043; --grey: #5f6368; }
-        body { font-family: 'Segoe UI', sans-serif; background: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { width: 100%; max-width: 350px; padding: 40px 20px; text-align: center; border-radius: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #f1f3f4; }
-        h1 { font-size: 24px; font-weight: 400; margin-bottom: 8px; color: var(--text); }
-        p { font-size: 14px; color: var(--grey); margin-bottom: 32px; line-height: 1.5; }
-        input { width: 100%; padding: 16px; margin-bottom: 12px; border: 1px solid #dadce0; border-radius: 8px; font-size: 16px; box-sizing: border-box; outline: none; }
-        input:focus { border: 2px solid var(--g-blue); }
-        button { background: var(--g-blue); color: #fff; border: none; padding: 14px; border-radius: 24px; font-size: 16px; font-weight: 500; cursor: pointer; width: 100%; }
-        #status { margin-top: 24px; font-size: 13px; color: var(--g-blue); font-weight: 500; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h1>Connect Pi</h1>
-        <p>Select your Pi from the list to send WiFi credentials.</p>
+async function sendWifi() {
+    const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
+    
+    try {
+        const device = await navigator.bluetooth.requestDevice({
+            // Accept all because of the naming issue
+            acceptAllDevices: true,
+            // You MUST list the service here so the browser "unlocks" access to it
+            optionalServices: [SERVICE_UUID]
+        });
+
+        const server = await device.gatt.connect();
         
-        <input type="text" id="ssid" placeholder="WiFi Name" spellcheck="false">
-        <input type="password" id="pass" placeholder="Password">
+        // Add a small delay after connecting to allow GATT discovery
+        await new Promise(r => setTimeout(r, 1000));
         
-        <button onclick="sendWifi()">Connect Device</button>
-        <div id="status">Ready</div>
-    </div>
-
-    <script>
-        const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
-        const CHAR_UUID = '87654321-4321-8765-4321-876543210987';
-
-        async function sendWifi() {
-            const status = document.getElementById('status');
-            const ssid = document.getElementById('ssid').value;
-            const pass = document.getElementById('pass').value;
-
-            try {
-                status.innerText = "Select your Pi (B8:27...)";
-                const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: [SERVICE_UUID]
-                });
-
-                status.innerText = "Connecting...";
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                const char = await service.getCharacteristic(CHAR_UUID);
-
-                status.innerText = "Sending credentials...";
-                const data = JSON.stringify({ ssid, pass });
-                await char.writeValue(new TextEncoder().encode(data));
-
-                status.innerText = "✅ Sent! Pi is connecting...";
-            } catch (err) {
-                status.innerText = "Error: " + err.message;
-            }
-        }
-    </script>
-</body>
-</html>
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        // ... rest of your code
+    } catch (e) {
+        console.error(e);
+    }
+}
