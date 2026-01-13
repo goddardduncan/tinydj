@@ -5,52 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pi Setup</title>
     <style>
-        :root { --g-blue: #4285f4; --g-grey: #5f6368; }
-        body { font-family: 'Google Sans', Roboto, Arial; background: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { width: 90%; max-width: 350px; text-align: center; padding: 20px; border-radius: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-        .logo { width: 40px; margin-bottom: 20px; }
-        h1 { font-size: 24px; font-weight: 400; margin-bottom: 8px; color: #3c4043; }
-        p { font-size: 14px; color: var(--g-grey); margin-bottom: 30px; line-height: 1.4; }
-        input { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid #dadce0; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline-color: var(--g-blue); }
-        button { width: 100%; padding: 14px; background: var(--g-blue); color: white; border: none; border-radius: 24px; font-size: 16px; font-weight: 500; cursor: pointer; transition: 0.2s; }
-        button:hover { box-shadow: 0 1px 6px rgba(66,133,244,0.3); }
-        #status { margin-top: 20px; font-size: 12px; color: var(--g-blue); min-height: 1.2em; }
+        :root { --g-blue: #4285f4; --text: #3c4043; --grey: #5f6368; }
+        body { font-family: 'Segoe UI', sans-serif; background: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { width: 100%; max-width: 350px; padding: 40px 20px; text-align: center; border-radius: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #f1f3f4; }
+        h1 { font-size: 24px; font-weight: 400; margin-bottom: 8px; color: var(--text); }
+        p { font-size: 14px; color: var(--grey); margin-bottom: 32px; line-height: 1.5; }
+        input { width: 100%; padding: 16px; margin-bottom: 12px; border: 1px solid #dadce0; border-radius: 8px; font-size: 16px; box-sizing: border-box; outline: none; }
+        input:focus { border: 2px solid var(--g-blue); }
+        button { background: var(--g-blue); color: #fff; border: none; padding: 14px; border-radius: 24px; font-size: 16px; font-weight: 500; cursor: pointer; width: 100%; }
+        #status { margin-top: 24px; font-size: 13px; color: var(--g-blue); font-weight: 500; }
     </style>
 </head>
 <body>
     <div class="card">
-        <img src="https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png" class="logo" alt="Google">
-        <h1>Connect your Pi</h1>
-        <p>Enter your WiFi details to finish setting up your Raspberry Pi Zero W.</p>
+        <h1>Connect Pi</h1>
+        <p>Select your Pi from the list to send WiFi credentials.</p>
         
-        <input type="text" id="ssid" placeholder="WiFi Name (SSID)" spellcheck="false">
-        <input type="password" id="pass" placeholder="WiFi Password">
+        <input type="text" id="ssid" placeholder="WiFi Name" spellcheck="false">
+        <input type="password" id="pass" placeholder="Password">
         
-        <button onclick="startSetup()">Connect</button>
-        <div id="status">Ready to connect</div>
+        <button onclick="sendWifi()">Connect Device</button>
+        <div id="status">Ready</div>
     </div>
 
     <script>
-        // These MUST match exactly what you registered in bluetoothctl
         const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
         const CHAR_UUID = '87654321-4321-8765-4321-876543210987';
 
-        async function startSetup() {
+        async function sendWifi() {
             const status = document.getElementById('status');
             const ssid = document.getElementById('ssid').value;
             const pass = document.getElementById('pass').value;
 
-            if (!ssid || !pass) {
-                status.innerText = "Please fill in all fields.";
-                return;
-            }
-
             try {
-                status.innerText = "Searching for PiZero-Config...";
-                
-                // Note: filters check the NAME, optionalServices allows the UUID access
+                status.innerText = "Select your Pi (B8:27...)";
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'PiZero-Config' }],
+                    acceptAllDevices: true,
                     optionalServices: [SERVICE_UUID]
                 });
 
@@ -63,10 +53,9 @@
                 const data = JSON.stringify({ ssid, pass });
                 await char.writeValue(new TextEncoder().encode(data));
 
-                status.innerText = "Success! Pi is updating WiFi.";
+                status.innerText = "✅ Sent! Pi is connecting...";
             } catch (err) {
                 status.innerText = "Error: " + err.message;
-                console.error(err);
             }
         }
     </script>
