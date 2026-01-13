@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Setup</title>
+    <style>
+        :root { --g-blue: #4285f4; --g-grey: #5f6368; --bg: #ffffff; }
+        body { font-family: 'Roboto', sans-serif; background: #f8f9fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #3c4043; }
+        .setup-card { background: var(--bg); padding: 40px 32px; border-radius: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); width: 100%; max-width: 360px; text-align: center; }
+        .logo { width: 48px; margin-bottom: 24px; }
+        h1 { font-size: 24px; font-weight: 400; margin: 0 0 12px 0; }
+        p { font-size: 14px; color: var(--g-grey); line-height: 1.5; margin-bottom: 32px; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        input { width: 100%; padding: 16px; border: 1px solid #dadce0; border-radius: 8px; font-size: 16px; box-sizing: border-box; transition: border 0.2s; outline: none; }
+        input:focus { border: 2px solid var(--g-blue); padding: 15px; }
+        button { background: var(--g-blue); color: white; border: none; padding: 14px; width: 100%; border-radius: 24px; font-size: 16px; font-weight: 500; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; }
+        button:active { opacity: 0.8; }
+        #status { font-size: 12px; margin-top: 20px; color: var(--g-blue); min-height: 18px; }
+    </style>
+</head>
+<body>
+    <div class="setup-card">
+        <svg class="logo" viewBox="0 0 24 24"><path fill="#4285f4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path fill="#4285f4" d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        <h1>Connect to WiFi</h1>
+        <p>Your Raspberry Pi will use these details to join your home network.</p>
+        
+        <div class="input-group">
+            <input type="text" id="ssid" placeholder="WiFi Name" spellcheck="false">
+        </div>
+        <div class="input-group">
+            <input type="password" id="pass" placeholder="Password">
+        </div>
+
+        <button onclick="sendCredentials()">Connect Device</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        async function sendCredentials() {
+            const ssid = document.getElementById('ssid').value;
+            const pass = document.getElementById('pass').value;
+            const status = document.getElementById('status');
+
+            if (!ssid || !pass) {
+                status.innerText = "Please fill in all fields.";
+                return;
+            }
+
+            try {
+                status.innerText = "Searching for Pi...";
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'PiZero-Config' }],
+                    optionalServices: ['12345678-1234-5678-1234-567812345678']
+                });
+
+                status.innerText = "Connecting...";
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('12345678-1234-5678-1234-567812345678');
+                const char = await service.getCharacteristic('87654321-4321-8765-4321-876543210987');
+
+                const payload = JSON.stringify({ ssid, pass });
+                await char.writeValue(new TextEncoder().encode(payload));
+                
+                status.innerText = "Success! Pi is connecting...";
+            } catch (err) {
+                status.innerText = "Error: " + err.message;
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>
