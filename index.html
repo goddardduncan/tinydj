@@ -3,69 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Device Setup</title>
+    <title>Pi Setup</title>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        :root { --g-blue: #4285f4; --g-grey: #5f6368; --bg: #ffffff; }
-        body { font-family: 'Roboto', sans-serif; background: #f8f9fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #3c4043; }
-        .setup-card { background: var(--bg); padding: 40px 32px; border-radius: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); width: 100%; max-width: 360px; text-align: center; }
-        .logo { width: 48px; margin-bottom: 24px; }
-        h1 { font-size: 24px; font-weight: 400; margin: 0 0 12px 0; }
-        p { font-size: 14px; color: var(--g-grey); line-height: 1.5; margin-bottom: 32px; }
-        .input-group { margin-bottom: 20px; text-align: left; }
-        input { width: 100%; padding: 16px; border: 1px solid #dadce0; border-radius: 8px; font-size: 16px; box-sizing: border-box; transition: border 0.2s; outline: none; }
-        input:focus { border: 2px solid var(--g-blue); padding: 15px; }
-        button { background: var(--g-blue); color: white; border: none; padding: 14px; width: 100%; border-radius: 24px; font-size: 16px; font-weight: 500; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; }
-        button:active { opacity: 0.8; }
-        #status { font-size: 12px; margin-top: 20px; color: var(--g-blue); min-height: 18px; }
+        :root {
+            --google-blue: #4285f4;
+            --google-red: #ea4335;
+            --google-yellow: #fbbc05;
+            --google-green: #34a853;
+            --text-main: #3c4043;
+            --text-secondary: #5f6368;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #ffffff;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: var(--text-main);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            padding: 40px 24px;
+            text-align: center;
+        }
+
+        .logo-container {
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        h1 {
+            font-family: 'Google Sans', sans-serif;
+            font-size: 28px;
+            font-weight: 400;
+            margin: 0 0 16px 0;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--google-blue);
+            box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+        }
+
+        button {
+            background-color: var(--google-blue);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-family: 'Google Sans', sans-serif;
+            font-weight: 500;
+            border-radius: 24px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s, transform 0.1s;
+            margin-top: 16px;
+        }
+
+        button:hover {
+            background-color: #1a73e8;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        #status {
+            margin-top: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--google-blue);
+            min-height: 20px;
+        }
+
+        .loader {
+            display: none;
+            margin: 20px auto;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--google-blue);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <div class="setup-card">
-        <svg class="logo" viewBox="0 0 24 24"><path fill="#4285f4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path fill="#4285f4" d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-        <h1>Connect to WiFi</h1>
-        <p>Your Raspberry Pi will use these details to join your home network.</p>
-        
-        <div class="input-group">
-            <input type="text" id="ssid" placeholder="WiFi Name" spellcheck="false">
+
+    <div class="container">
+        <div class="logo-container">
+            <div class="dot" style="background-color: var(--google-blue);"></div>
+            <div class="dot" style="background-color: var(--google-red);"></div>
+            <div class="dot" style="background-color: var(--google-yellow);"></div>
+            <div class="dot" style="background-color: var(--google-green);"></div>
         </div>
-        <div class="input-group">
+
+        <h1>Connect Pi</h1>
+        <p>Set up your Raspberry Pi Zero W by entering your WiFi credentials.</p>
+
+        <div class="form-group">
+            <input type="text" id="ssid" placeholder="WiFi Network Name" autocomplete="off" spellcheck="false">
+        </div>
+
+        <div class="form-group">
             <input type="password" id="pass" placeholder="Password">
         </div>
 
-        <button onclick="sendCredentials()">Connect Device</button>
-        <div id="status"></div>
+        <button id="connectBtn" onclick="handleConnect()">Connect to Device</button>
+        
+        <div class="loader" id="spinner"></div>
+        <div id="status">Ready to pair</div>
     </div>
 
     <script>
-        async function sendCredentials() {
+        // Matching your bluetoothctl setup
+        const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
+        const CHAR_UUID = '87654321-4321-8765-4321-876543210987';
+
+        async function handleConnect() {
             const ssid = document.getElementById('ssid').value;
             const pass = document.getElementById('pass').value;
             const status = document.getElementById('status');
+            const spinner = document.getElementById('spinner');
+            const btn = document.getElementById('connectBtn');
 
             if (!ssid || !pass) {
-                status.innerText = "Please fill in all fields.";
+                status.innerText = "Please enter both SSID and Password";
+                status.style.color = "var(--google-red)";
                 return;
             }
 
             try {
+                btn.style.display = "none";
+                spinner.style.display = "block";
+                status.style.color = "var(--google-blue)";
                 status.innerText = "Searching for Pi...";
+
+                // 1. Request the device
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ name: 'PiZero-Config' }],
-                    optionalServices: ['12345678-1234-5678-1234-567812345678']
+                    optionalServices: [SERVICE_UUID]
                 });
 
-                status.innerText = "Connecting...";
+                status.innerText = "Connecting to GATT Server...";
                 const server = await device.gatt.connect();
-                const service = await server.getPrimaryService('12345678-1234-5678-1234-567812345678');
-                const char = await service.getCharacteristic('87654321-4321-8765-4321-876543210987');
 
+                status.innerText = "Accessing WiFi Service...";
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(CHAR_UUID);
+
+                status.innerText = "Sending credentials...";
                 const payload = JSON.stringify({ ssid, pass });
-                await char.writeValue(new TextEncoder().encode(payload));
-                
-                status.innerText = "Success! Pi is connecting...";
-            } catch (err) {
-                status.innerText = "Error: " + err.message;
-                console.error(err);
+                const encoder = new TextEncoder();
+                await characteristic.writeValue(encoder.encode(payload));
+
+                status.innerText = "Success! Pi is reconnecting to WiFi.";
+                status.style.color = "var(--google-green)";
+                spinner.style.display = "none";
+
+            } catch (error) {
+                console.error(error);
+                status.innerText = "Connection failed: " + error.message;
+                status.style.color = "var(--google-red)";
+                spinner.style.display = "none";
+                btn.style.display = "block";
             }
         }
     </script>
