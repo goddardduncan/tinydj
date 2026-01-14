@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>tiny Di Setup</title>
+    <title>tiny Dj Setup</title>
     <style>
         :root { --accent: #bf00ff; --cyan: #00ffff; --text: #3c4043; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f0f; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; }
@@ -61,8 +61,8 @@
            /____/         /___/    
         </div>
         
-        <h1>System Provisioning</h1>
-        <p>Transfer WiFi credentials to target Pi Zero</p>
+        <h1>WiFi Setup</h1>
+        <p>Enter WiFi credentials to connect tinyDJ</p>
         
         <div class="input-group">
             <label>SSID</label>
@@ -74,7 +74,7 @@
             <input type="password" id="pass" placeholder="••••••••">
         </div>
         
-        <button id="mainBtn" onclick="connectAndSend()">Initialize Transfer</button>
+        <button id="mainBtn" onclick="connectAndSend()">Connect to bluetooth and Setup Wifi</button>
         <div class="loader" id="loader"></div>
         <div id="status">Standby</div>
     </div>
@@ -119,7 +119,7 @@
                 // Keep the 'without response' fix to avoid the GATT error
                 await characteristic.writeValueWithoutResponse(encoder.encode(data));
 
-                updateStatus("SUCCESS: Broadcast Complete", "#00ffff");
+                updateStatus("SUCCESS: WiFi details uploaded", "#00ffff");
                 
                 setTimeout(() => device.gatt.disconnect(), 1000);
                 toggleUI(false);
