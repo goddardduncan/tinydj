@@ -98,8 +98,13 @@
 
                 // BRINGING BACK: Show all devices
                 const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true, 
-                    optionalServices: [SERVICE_UUID] // Still required to access our service
+                    // Remove the service filter temporarily to see if we can find it by name
+                    filters: [
+                        { namePrefix: 'tinyDJ' }, 
+                        { namePrefix: 'PiZero' },
+                        { namePrefix: 'BlueZ' }
+                    ],
+                    optionalServices: [SERVICE_UUID] 
                 });
 
                 updateStatus("Establishing GATT Connection...");
