@@ -42,21 +42,38 @@
 
         /* Shared Bar Styling */
         .bottom-bar, .top-bar {
-            position: fixed; left: 0; right: 0; background: #111; padding: 12px 20px;
+            position: fixed; left: 0; right: 0; background: #111; padding: 10px 20px;
             border-top: 1px solid #333; display: flex; align-items: center; gap: 12px; z-index: 100;
         }
         .bottom-bar { bottom: 0; }
-        .top-bar { top: 0; border-top: none; border-bottom: 1px solid #333; justify-content: flex-end; }
+        .top-bar { top: 0; border-top: none; border-bottom: 1px solid #333; justify-content: space-between; }
         
-        .bar-input { margin-bottom: 0; font-family: monospace; font-size: 13px; background: #000; padding: 10px; width: 180px; }
+        .bar-input { margin-bottom: 0; font-family: monospace; font-size: 12px; background: #000; border: 1px solid #333; border-radius: 8px; padding: 8px 12px; width: 140px; color: var(--cyan); }
         .bar-label { margin-bottom: 0; color: var(--cyan); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+
+        /* Nav Link Buttons */
+        .nav-group { display: flex; gap: 8px; }
+        .nav-btn {
+            background: #1a0026; border: 1px solid var(--accent); color: var(--accent);
+            padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700;
+            text-decoration: none; text-transform: uppercase; letter-spacing: 0.5px;
+            transition: all 0.2s; font-family: monospace;
+        }
+        .nav-btn:hover { background: var(--accent); color: white; box-shadow: 0 0 10px rgba(191, 0, 255, 0.3); }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
-        <label class="bar-label">Wireguard IP</label>
-        <input type="text" id="hostIp" class="bar-input" placeholder="10.8.0.12" spellcheck="false">
+        <div class="nav-group">
+            <a href="https://rbit.dunc.app" target="_blank" class="nav-btn">RQBIT</a>
+            <a href="https://rbox.dunc.app" target="_blank" class="nav-btn">BOX</a>
+            <a href="https://rps.dunc.app" target="_blank" class="nav-btn">PSEARCH</a>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <label class="bar-label">Host IP</label>
+            <input type="text" id="hostIp" class="bar-input" placeholder="10.8.0.12" spellcheck="false">
+        </div>
     </div>
 
     <div class="card">
@@ -88,23 +105,21 @@
     </div>
 
     <div class="bottom-bar">
-        <label class="bar-label">REMOTE</label>
-        <input type="text" id="curlInput" class="bar-input" style="flex-grow: 1;" placeholder="Paste URL and press Enter..." spellcheck="false">
-        <div id="curlStatus" style="font-size: 11px; font-family: monospace; color: #555; min-width: 70px;">Ready</div>
+        <label class="bar-label" style="color: var(--cyan);">REMOTE</label>
+        <input type="text" id="curlInput" class="bar-input" style="flex-grow: 1; color: white;" placeholder="Paste URL and press Enter..." spellcheck="false">
+        <div id="curlStatus" style="font-size: 11px; font-family: monospace; color: #555; min-width: 60px;">Ready</div>
     </div>
 
     <script>
         // --- Persistence Logic ---
         const hostIpInput = document.getElementById('hostIp');
         
-        // Load saved IP on startup
         window.addEventListener('DOMContentLoaded', () => {
             const savedIp = localStorage.getItem('tinyDjHostIp');
             if (savedIp) hostIpInput.value = savedIp;
-            else hostIpInput.value = "10.8.0.12"; // Default
+            else hostIpInput.value = "10.8.0.12";
         });
 
-        // Save IP whenever it changes
         hostIpInput.addEventListener('input', () => {
             localStorage.setItem('tinyDjHostIp', hostIpInput.value.trim());
         });
@@ -118,7 +133,7 @@
                 let url = curlInput.value.trim();
                 if (!url) return;
 
-                curlStatus.innerText = "Checking...";
+                curlStatus.innerText = "Check...";
                 curlStatus.style.color = "var(--cyan)";
 
                 if (!url.match(/\.(mkv|mp4|mp3|avi|m3u8)$/i)) {
@@ -129,7 +144,7 @@
                         const foundUrl = text.split('\n').find(line => line.trim().startsWith('http'));
                         if (foundUrl) url = foundUrl.trim();
                     } catch (err) {
-                        console.log("Using original URL - playlist fetch failed.");
+                        console.log("Using original URL");
                     }
                 }
 
@@ -159,7 +174,7 @@
             const pass = document.getElementById('pass').value;
 
             if (!ssid || !pass) { 
-                updateStatus("ERR: Missing Credentials", "#ea4335"); 
+                updateStatus("ERR: Missing Data", "#ea4335"); 
                 return; 
             }
 
@@ -167,38 +182,28 @@
                 toggleUI(true);
                 updateStatus("Scanning...");
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [
-                        { namePrefix: 'tinyDJ' }, 
-                        { namePrefix: 'PiZero' }, 
-                        { namePrefix: 'BlueZ' }
-                    ],
+                    filters: [{ namePrefix: 'tinyDJ' }, { namePrefix: 'PiZero' }, { namePrefix: 'BlueZ' }],
                     optionalServices: [SERVICE_UUID] 
                 });
 
-                updateStatus("Connecting GATT...");
+                updateStatus("Connecting...");
                 const server = await device.gatt.connect();
-
-                updateStatus("Discovering...");
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 const characteristic = await service.getCharacteristic(CHAR_UUID);
 
                 updateStatus("Writing...");
                 const data = JSON.stringify({ ssid, pass });
                 const encoder = new TextEncoder();
-                
                 await characteristic.writeValueWithoutResponse(encoder.encode(data));
 
                 updateStatus("SUCCESS", "#00ffff");
-                
                 setTimeout(() => {
                     device.gatt.disconnect();
                     updateStatus("Ready", "#888");
                 }, 2000);
-                
                 toggleUI(false);
 
             } catch (err) {
-                console.error(err);
                 updateStatus("ERR: " + err.message, "#ea4335");
                 toggleUI(false);
             }
