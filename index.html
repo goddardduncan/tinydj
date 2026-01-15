@@ -6,22 +6,14 @@
     <title>tiny Dj Setup</title>
     <style>
         :root { --accent: #bf00ff; --cyan: #00ffff; --text: #3c4043; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f0f; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f0f; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; overflow: hidden; }
         
-        .card { background: #1a1a1a; width: 100%; max-width: 380px; padding: 40px 24px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; border: 1px solid #333; }
+        .card { background: #1a1a1a; width: 100%; max-width: 380px; padding: 40px 24px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; border: 1px solid #333; z-index: 10; }
         
-        /* ASCII Header Styling */
         .ascii-header {
-            font-family: monospace;
-            white-space: pre;
-            font-size: 10px;
-            line-height: 1.2;
-            margin-bottom: 20px;
-            display: inline-block;
-            background: linear-gradient(to right, var(--accent), var(--cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: bold;
+            font-family: monospace; white-space: pre; font-size: 10px; line-height: 1.2; margin-bottom: 20px;
+            display: inline-block; background: linear-gradient(to right, var(--accent), var(--cyan));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold;
         }
 
         h1 { font-size: 22px; font-weight: 500; margin: 0 0 8px; letter-spacing: -0.5px; }
@@ -44,16 +36,24 @@
         button:active { transform: scale(0.98); }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        #status { margin-top: 24px; font-size: 13px; color: #666; font-family: monospace; }
+        #status { margin-top: 24px; font-size: 13px; color: #666; font-family: monospace; min-height: 1.2em; }
         .loader { display: none; width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 15px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Bottom Bar Styling */
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; background: #111; padding: 12px 20px;
+            border-top: 1px solid #333; display: flex; align-items: center; gap: 12px; z-index: 100;
+        }
+        .bottom-bar input { margin-bottom: 0; font-family: monospace; font-size: 13px; background: #000; padding: 10px; }
+        .bottom-bar label { margin-bottom: 0; color: var(--cyan); font-size: 10px; }
     </style>
 </head>
 <body>
 
     <div class="card">
         <div class="ascii-header">
-   __  _                 ____     _
+   __  _                ____     _
   / /_(_)___  __  __    / __ \   (_)
  / __/ / __ \/ / / /   / / / /  / / 
 / /_/ / / / / /_/ /   / /_/ /  / /  
@@ -76,10 +76,57 @@
         
         <button id="mainBtn" onclick="connectAndSend()">Connect to tinyDJ and Setup Wifi</button>
         <div class="loader" id="loader"></div>
-        <div id="status"></div>
+        <div id="status">Ready</div>
+    </div>
+
+    <div class="bottom-bar">
+        <label>REMOTE</label>
+        <input type="text" id="curlInput" placeholder="Paste URL and press Enter..." spellcheck="false">
+        <div id="curlStatus" style="font-size: 11px; font-family: monospace; color: #555; min-width: 70px;">Ready</div>
     </div>
 
     <script>
+        // --- Smart Curl Logic (From File 1) ---
+        const curlInput = document.getElementById('curlInput');
+        const curlStatus = document.getElementById('curlStatus');
+
+        curlInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                let url = curlInput.value.trim();
+                if (!url) return;
+
+                curlStatus.innerText = "Checking...";
+                curlStatus.style.color = "var(--cyan)";
+
+                if (!url.match(/\.(mkv|mp4|mp3|avi|m3u8)$/i)) {
+                    try {
+                        const playlistUrl = url.endsWith('/') ? url + 'playlist' : url + '/playlist';
+                        const response = await fetch(playlistUrl);
+                        const text = await response.text();
+                        const foundUrl = text.split('\n').find(line => line.trim().startsWith('http'));
+                        if (foundUrl) url = foundUrl.trim();
+                    } catch (err) {
+                        console.log("Using original URL - playlist fetch failed.");
+                    }
+                }
+
+                const target = `http://10.8.0.12:7979/${url}`;
+                
+                fetch(target, { mode: 'no-cors' })
+                    .then(() => {
+                        curlStatus.innerText = "Sent!";
+                        curlStatus.style.color = "#00ff00";
+                        curlInput.value = "";
+                        setTimeout(() => curlStatus.innerText = "Ready", 2000);
+                    })
+                    .catch(() => {
+                        curlStatus.innerText = "Error";
+                        curlStatus.style.color = "#ea4335";
+                    });
+            }
+        });
+
+        // --- Bluetooth Logic (Enhanced with File 2 Granularity) ---
         const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
         const CHAR_UUID = '87654321-4321-8765-4321-876543210987';
 
@@ -87,21 +134,20 @@
             const ssid = document.getElementById('ssid').value;
             const pass = document.getElementById('pass').value;
 
-            if (!ssid || !pass) {
-                updateStatus("ERR: Missing Credentials", "#ea4335");
-                return;
+            if (!ssid || !pass) { 
+                updateStatus("ERR: Missing Credentials", "#ea4335"); 
+                return; 
             }
 
             try {
                 toggleUI(true);
-                updateStatus("Scanning for all devices...");
-
-                // BRINGING BACK: Show all devices
+                
+                // Detailed Steps
+                updateStatus("Scanning for tinyDJ devices...");
                 const device = await navigator.bluetooth.requestDevice({
-                    // Remove the service filter temporarily to see if we can find it by name
                     filters: [
                         { namePrefix: 'tinyDJ' }, 
-                        { namePrefix: 'PiZero' },
+                        { namePrefix: 'PiZero' }, 
                         { namePrefix: 'BlueZ' }
                     ],
                     optionalServices: [SERVICE_UUID] 
@@ -111,7 +157,6 @@
                 const server = await device.gatt.connect();
 
                 updateStatus("Discovering Services...");
-                // Note: getPrimaryService might fail if the script is still setting up
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 
                 updateStatus("Locating Characteristic...");
@@ -121,16 +166,20 @@
                 const data = JSON.stringify({ ssid, pass });
                 const encoder = new TextEncoder();
                 
-                // Keep the 'without response' fix to avoid the GATT error
+                // Write without response to avoid common GATT errors
                 await characteristic.writeValueWithoutResponse(encoder.encode(data));
 
                 updateStatus("SUCCESS: WiFi details uploaded", "#00ffff");
                 
-                setTimeout(() => device.gatt.disconnect(), 1000);
+                setTimeout(() => {
+                    device.gatt.disconnect();
+                    updateStatus("Disconnected safely.", "#888");
+                }, 1500);
+                
                 toggleUI(false);
 
             } catch (err) {
-                console.error(err);
+                console.error("Bluetooth Error Trace:", err);
                 updateStatus("CRITICAL ERR: " + err.message, "#ea4335");
                 toggleUI(false);
             }
@@ -145,6 +194,7 @@
         function toggleUI(loading) {
             document.getElementById('loader').style.display = loading ? "block" : "none";
             document.getElementById('mainBtn').disabled = loading;
+            if (loading) updateStatus("Working...");
         }
     </script>
 </body>
