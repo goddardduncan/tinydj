@@ -40,6 +40,7 @@
         .loader { display: none; width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 15px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* Shared Bar Styling */
         .bottom-bar, .top-bar {
             position: fixed; left: 0; right: 0; background: #111; padding: 10px 20px;
             border-top: 1px solid #333; display: flex; align-items: center; gap: 12px; z-index: 100;
@@ -50,6 +51,7 @@
         .bar-input { margin-bottom: 0; font-family: monospace; font-size: 12px; background: #000; border: 1px solid #333; border-radius: 8px; padding: 8px 12px; width: 140px; color: var(--cyan); }
         .bar-label { margin-bottom: 0; color: var(--cyan); font-size: 10px; font-weight: 700; text-transform: uppercase; }
 
+        /* Nav Link Buttons */
         .nav-group { display: flex; gap: 8px; }
         .nav-btn {
             background: #1a0026; border: 1px solid var(--accent); color: var(--accent);
@@ -109,17 +111,20 @@
     </div>
 
     <script>
+        // --- Persistence Logic ---
         const hostIpInput = document.getElementById('hostIp');
         
         window.addEventListener('DOMContentLoaded', () => {
             const savedIp = localStorage.getItem('tinyDjHostIp');
-            hostIpInput.value = savedIp || "10.8.0.12";
+            if (savedIp) hostIpInput.value = savedIp;
+            else hostIpInput.value = "10.8.0.12";
         });
 
         hostIpInput.addEventListener('input', () => {
             localStorage.setItem('tinyDjHostIp', hostIpInput.value.trim());
         });
 
+        // --- Smart Curl Logic ---
         const curlInput = document.getElementById('curlInput');
         const curlStatus = document.getElementById('curlStatus');
 
@@ -128,46 +133,24 @@
                 let url = curlInput.value.trim();
                 if (!url) return;
 
-                curlStatus.innerText = "Proxying...";
+                curlStatus.innerText = "Check...";
                 curlStatus.style.color = "var(--cyan)";
 
-                // Step 1: Resolve playlist using a CORS Proxy
-                if (url.includes('/playlist') || !url.match(/\.(mkv|mp4|mp3|avi)$/i)) {
+                if (!url.match(/\.(mkv|mp4|mp3|avi|m3u8)$/i)) {
                     try {
-                        const targetPlaylist = url.endsWith('/playlist') ? url : url.replace(/\/$/, '') + '/playlist';
-                        
-                        // Using AllOrigins Proxy to bypass CORS and Mixed Content restrictions
-                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetPlaylist)}`;
-                        
-                        const response = await fetch(proxyUrl);
-                        const data = await response.json();
-                        const text = data.contents; // The actual playlist text
-                        
-                        const lines = text.split('\n').map(l => l.trim());
-                        const foundPath = lines.find(line => line && !line.startsWith('#'));
-
-                        if (foundPath) {
-                            if (foundPath.startsWith('http')) {
-                                url = foundPath;
-                            } else {
-                                const urlObj = new URL(foundPath, targetPlaylist);
-                                url = urlObj.href;
-                            }
-                            console.log("Resolved Stream URL via Proxy:", url);
-                        }
+                        const playlistUrl = url.endsWith('/') ? url + 'playlist' : url + '/playlist';
+                        const response = await fetch(playlistUrl);
+                        const text = await response.text();
+                        const foundUrl = text.split('\n').find(line => line.trim().startsWith('http'));
+                        if (foundUrl) url = foundUrl.trim();
                     } catch (err) {
-                        console.error("Proxy fetch failed:", err);
-                        curlStatus.innerText = "Fetch Err";
-                        curlStatus.style.color = "#ea4335";
-                        return; 
+                        console.log("Using original URL");
                     }
                 }
 
-                // Step 2: Send resolved URL to tinyDJ
                 const currentIp = hostIpInput.value.trim() || "10.8.0.12";
                 const target = `http://${currentIp}:7979/${url}`;
                 
-                // Note: fetch to local IP remains no-cors fire-and-forget
                 fetch(target, { mode: 'no-cors' })
                     .then(() => {
                         curlStatus.innerText = "Sent!";
@@ -176,33 +159,50 @@
                         setTimeout(() => curlStatus.innerText = "Ready", 2000);
                     })
                     .catch(() => {
-                        curlStatus.innerText = "Host Err";
+                        curlStatus.innerText = "Error";
                         curlStatus.style.color = "#ea4335";
                     });
             }
         });
 
-        // Bluetooth Logic remains unchanged
+        // --- Bluetooth Logic ---
+        const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
+        const CHAR_UUID = '87654321-4321-8765-4321-876543210987';
+
         async function connectAndSend() {
             const ssid = document.getElementById('ssid').value;
             const pass = document.getElementById('pass').value;
-            if (!ssid || !pass) { updateStatus("ERR: Missing Data", "#ea4335"); return; }
+
+            if (!ssid || !pass) { 
+                updateStatus("ERR: Missing Data", "#ea4335"); 
+                return; 
+            }
+
             try {
                 toggleUI(true);
                 updateStatus("Scanning...");
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'tinyDJ' }, { namePrefix: 'PiZero' }, { namePrefix: 'BlueZ' }],
-                    optionalServices: ['12345678-1234-5678-1234-567812345678'] 
+                    optionalServices: [SERVICE_UUID] 
                 });
+
                 updateStatus("Connecting...");
                 const server = await device.gatt.connect();
-                const service = await server.getPrimaryService('12345678-1234-5678-1234-567812345678');
-                const characteristic = await service.getCharacteristic('87654321-4321-8765-4321-876543210987');
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                const characteristic = await service.getCharacteristic(CHAR_UUID);
+
                 updateStatus("Writing...");
-                await characteristic.writeValueWithoutResponse(new TextEncoder().encode(JSON.stringify({ ssid, pass })));
+                const data = JSON.stringify({ ssid, pass });
+                const encoder = new TextEncoder();
+                await characteristic.writeValueWithoutResponse(encoder.encode(data));
+
                 updateStatus("SUCCESS", "#00ffff");
-                setTimeout(() => { device.gatt.disconnect(); updateStatus("Ready", "#888"); }, 2000);
+                setTimeout(() => {
+                    device.gatt.disconnect();
+                    updateStatus("Ready", "#888");
+                }, 2000);
                 toggleUI(false);
+
             } catch (err) {
                 updateStatus("ERR: " + err.message, "#ea4335");
                 toggleUI(false);
