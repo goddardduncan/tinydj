@@ -3,71 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>tiny Dj Setup</title>
+    <title>tinyDJ Remote</title>
     <style>
-        :root { --accent: #bf00ff; --cyan: #00ffff; --text: #3c4043; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f0f0f; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; overflow: hidden; }
+        :root { --accent: #bf00ff; --cyan: #00ffff; --bg: #0f0f0f; --card-bg: #1a1a1a; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; overflow: hidden; }
         
-        .card { background: #1a1a1a; width: 100%; max-width: 380px; padding: 40px 24px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; border: 1px solid #333; z-index: 10; }
+        .card { background: var(--card-bg); width: 100%; max-width: 380px; padding: 40px 24px; border-radius: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); text-align: center; border: 1px solid #333; z-index: 10; position: relative; }
         
         .ascii-header {
-            font-family: monospace; white-space: pre; font-size: 10px; line-height: 1.2; margin-bottom: 20px;
+            font-family: monospace; white-space: pre; font-size: 10px; line-height: 1.2; margin-bottom: 24px;
             display: inline-block; background: linear-gradient(to right, var(--accent), var(--cyan));
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold;
         }
 
-        h1 { font-size: 22px; font-weight: 500; margin: 0 0 8px; letter-spacing: -0.5px; }
-        p { color: #888; font-size: 14px; margin-bottom: 30px; }
-        
-        .input-group { margin-bottom: 18px; text-align: left; }
-        label { display: block; font-size: 11px; margin-bottom: 8px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
-        
-        input { 
-            width: 100%; padding: 14px; background: #222; border: 1px solid #444; border-radius: 12px; 
-            font-size: 16px; box-sizing: border-box; outline: none; color: white; transition: all 0.2s; 
-        }
-        input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0, 255, 255, 0.1); }
-        
-        button { 
-            background: linear-gradient(45deg, var(--accent), #7d82ff); color: white; border: none; 
-            padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; 
-            width: 100%; margin-top: 10px; transition: transform 0.1s, opacity 0.2s; 
-        }
-        button:active { transform: scale(0.98); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .main-display { margin-bottom: 25px; }
+        .main-display h1 { font-size: 24px; margin: 0; font-weight: 500; }
+        .main-display p { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px; font-family: monospace; }
 
-        /* Control Button Group */
-        .nav-controls { display: flex; gap: 8px; margin-top: 15px; }
+        .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        
         .ctrl-btn { 
             background: #252525; border: 1px solid #444; color: var(--cyan); 
-            padding: 12px 8px; border-radius: 12px; font-family: monospace; font-weight: bold; 
-            cursor: pointer; flex: 1; transition: all 0.2s; font-size: 12px;
+            padding: 20px 5px; border-radius: 18px; font-family: monospace; font-weight: bold; 
+            cursor: pointer; transition: all 0.2s; font-size: 13px;
         }
-        .ctrl-btn:hover { background: #333; border-color: var(--cyan); }
-        .ctrl-btn:active { background: var(--cyan); color: #000; }
-        
-        #status { margin-top: 24px; font-size: 13px; color: #666; font-family: monospace; min-height: 1.2em; }
-        .loader { display: none; width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 15px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .ctrl-btn:hover { border-color: var(--cyan); background: #2a2a2a; }
+        .ctrl-btn:active { background: var(--cyan); color: #000; transform: translateY(2px); }
 
-        .bottom-bar, .top-bar {
-            position: fixed; left: 0; right: 0; background: #111; padding: 10px 20px;
-            border-top: 1px solid #333; display: flex; align-items: center; gap: 12px; z-index: 100;
+        .action-btn { 
+            background: linear-gradient(45deg, var(--accent), #7d82ff); color: white; border: none; 
+            padding: 16px; border-radius: 14px; font-size: 14px; font-weight: 600; cursor: pointer; 
+            width: 100%; margin-top: 10px; transition: transform 0.1s; 
         }
-        .bottom-bar { bottom: 0; }
-        .top-bar { top: 0; border-top: none; border-bottom: 1px solid #333; justify-content: space-between; }
-        
-        .bar-input { margin-bottom: 0; font-family: monospace; font-size: 12px; background: #000; border: 1px solid #333; border-radius: 8px; padding: 8px 12px; width: 140px; color: var(--cyan); }
-        .bar-label { margin-bottom: 0; color: var(--cyan); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .action-btn:active { transform: scale(0.98); }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .top-bar, .bottom-bar { position: fixed; left: 0; right: 0; background: #0a0a0a; padding: 10px 20px; display: flex; align-items: center; z-index: 100; border-bottom: 1px solid #222; }
+        .top-bar { top: 0; justify-content: space-between; }
+        .bottom-bar { bottom: 0; top: auto; border-bottom: none; border-top: 1px solid #222; }
 
         .nav-group { display: flex; gap: 8px; }
         .nav-btn {
             background: #1a0026; border: 1px solid var(--accent); color: var(--accent);
             padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700;
-            text-decoration: none; text-transform: uppercase; letter-spacing: 0.5px;
-            transition: all 0.2s; font-family: monospace;
+            text-decoration: none; text-transform: uppercase; font-family: monospace; transition: 0.2s;
         }
-        .nav-btn:hover { background: var(--accent); color: white; box-shadow: 0 0 10px rgba(191, 0, 255, 0.3); }
+        .nav-btn:hover { background: var(--accent); color: white; }
+
+        .settings-trigger { background: none; border: 1px solid #444; color: #888; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 800; }
+        .settings-trigger:hover { color: var(--cyan); border-color: var(--cyan); }
+
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            display: none; justify-content: center; align-items: center; z-index: 1000; 
+        }
+        .modal-open { display: flex; }
+        .modal { background: #1a1a1a; width: 90%; max-width: 340px; padding: 30px; border-radius: 28px; border: 1px solid #333; text-align: left; }
+        
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 10px; margin-bottom: 6px; color: var(--accent); font-weight: 800; text-transform: uppercase; }
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid #333; border-radius: 12px; color: white; font-size: 14px; box-sizing: border-box; outline: none; }
+        input:focus { border-color: var(--cyan); }
+        input.error { border-color: #ff4444; }
+
+        #status { margin-top: 24px; font-size: 12px; font-family: monospace; color: #555; min-height: 1.2em; text-transform: uppercase; }
+        .loader { display: none; width: 18px; height: 18px; border: 2px solid #333; border-top: 2px solid var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 12px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -78,10 +80,7 @@
             <a href="https://rbox.dunc.app" target="_blank" class="nav-btn">BOX</a>
             <a href="https://rps.dunc.app" target="_blank" class="nav-btn">PSEARCH</a>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <label class="bar-label">Host IP</label>
-            <input type="text" id="hostIp" class="bar-input" placeholder="10.8.0.12" spellcheck="false">
-        </div>
+        <button class="settings-trigger" onclick="toggleModal()">⚙️ SETTINGS</button>
     </div>
 
     <div class="card">
@@ -93,114 +92,136 @@
 \__/_/_/ /_/\__, /   /_____/_/ /   
            /____/         /___/    
         </div>
-        
-        <h1>WiFi Setup</h1>
-        <p>Enter WiFi credentials to connect tinyDJ</p>
-        
-        <div class="input-group">
-            <label>SSID</label>
-            <input type="text" id="ssid" placeholder="Network Name" spellcheck="false">
+
+        <div class="main-display">
+            <h1>NOW PLAYING</h1>
+            <p id="ip-display">Connecting...</p>
         </div>
-        
-        <div class="input-group">
-            <label>Passphrase</label>
-            <input type="password" id="pass" placeholder="••••••••">
-        </div>
-        
-        <button id="mainBtn" onclick="connectAndSend()">Connect & Setup Wifi</button>
-        
-        <div class="nav-controls">
+
+        <div class="nav-grid">
             <button class="ctrl-btn" onclick="hitEndpoint('ui/prev')">PREV</button>
-            <button class="ctrl-btn" onclick="hitEndpoint('pause')" title="Spacebar">PLAY/PAUSE</button>
-            <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
             <button class="ctrl-btn" onclick="hitEndpoint('ui/next')">NEXT</button>
+        </div>
+        <div class="nav-grid">
+            <button class="ctrl-btn" onclick="hitEndpoint('pause')">PAUSE</button>
+            <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
         </div>
 
         <div class="loader" id="loader"></div>
         <div id="status">Ready</div>
     </div>
 
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h3 style="margin: 0 0 10px 0; color: var(--cyan); letter-spacing: 1px;">WIFI SETUP</h3>
+            <p style="color: #666; font-size: 11px; margin-bottom: 20px;">Enter WiFi credentials to connect tinyDJ</p>
+            
+            <div class="input-group">
+                <label>SSID</label>
+                <input type="text" id="ssid" placeholder="Network Name" spellcheck="false">
+            </div>
+            <div class="input-group">
+                <label>Passphrase</label>
+                <input type="password" id="pass" placeholder="••••••••">
+            </div>
+
+            <div style="height: 1px; background: #333; margin: 20px 0;"></div>
+
+            <div class="input-group">
+                <label>Host IP (Remote Control)</label>
+                <input type="text" id="hostIp" placeholder="10.8.0.12" spellcheck="false">
+            </div>
+
+            <button class="action-btn" id="btBtn" onclick="connectAndSend()">Connect to tinyDJ and update Wifi</button>
+            <button class="ctrl-btn" style="width: 100%; margin-top: 8px; border-color: #555; color: #888;" onclick="toggleModal()">CLOSE</button>
+        </div>
+    </div>
+
     <div class="bottom-bar">
-        <label class="bar-label" style="color: var(--cyan);">REMOTE</label>
-        <input type="text" id="curlInput" class="bar-input" style="flex-grow: 1; color: white;" placeholder="Paste raw URL and press Enter..." spellcheck="false">
-        <div id="curlStatus" style="font-size: 11px; font-family: monospace; color: #555; min-width: 60px;">Ready</div>
+        <label style="font-size: 10px; color: var(--cyan); font-weight: 800; margin-right: 12px;">REMOTE</label>
+        <input type="text" id="curlInput" style="background:#000; border:1px solid #333; color:white; padding:8px 12px; border-radius:10px; flex-grow:1; font-family:monospace; font-size:12px;" placeholder="Paste URL and press Enter...">
+        <div id="curlStatus" style="font-size: 10px; font-family: monospace; color: #555; margin-left: 10px;">Ready</div>
     </div>
 
     <script>
+        const modal = document.getElementById('settingsModal');
         const hostIpInput = document.getElementById('hostIp');
+        const ipDisplay = document.getElementById('ip-display');
         const curlInput = document.getElementById('curlInput');
         const curlStatus = document.getElementById('curlStatus');
+        const ssidInput = document.getElementById('ssid');
+        const passInput = document.getElementById('pass');
 
-        // --- Persistence Logic ---
         window.addEventListener('DOMContentLoaded', () => {
-            const savedIp = localStorage.getItem('tinyDjHostIp');
-            if (savedIp) hostIpInput.value = savedIp;
-            else hostIpInput.value = "10.8.0.12";
+            const savedIp = localStorage.getItem('tinyDjHostIp') || "10.8.0.12";
+            hostIpInput.value = savedIp;
+            ipDisplay.innerText = `IP: ${savedIp}`;
         });
 
         hostIpInput.addEventListener('input', () => {
-            localStorage.setItem('tinyDjHostIp', hostIpInput.value.trim());
+            const val = hostIpInput.value.trim();
+            localStorage.setItem('tinyDjHostIp', val);
+            ipDisplay.innerText = `IP: ${val}`;
         });
 
-        // --- Navigation Logic ---
+        function toggleModal() {
+            modal.classList.toggle('modal-open');
+            // Clear errors when opening/closing
+            ssidInput.classList.remove('error');
+            passInput.classList.remove('error');
+        }
+
+        window.onclick = (e) => { if (e.target == modal) toggleModal(); }
+
         async function hitEndpoint(path) {
             const currentIp = hostIpInput.value.trim() || "10.8.0.12";
             const target = `http://${currentIp}:7979/${path}`;
+            updateStatus(`${path}...`, "var(--cyan)");
             
-            updateStatus(`${path.toUpperCase()}...`, "var(--cyan)");
-
             fetch(target, { mode: 'no-cors' })
                 .then(() => {
-                    updateStatus("Sent!", "#00ff00");
+                    updateStatus("SUCCESS", "#00ff00");
                     setTimeout(() => updateStatus("Ready"), 1500);
                 })
-                .catch(() => {
-                    updateStatus("Remote Error", "#ea4335");
-                });
+                .catch(() => updateStatus("REMOTE ERR", "#ff4444"));
         }
 
-        // --- RAW CAST LOGIC ---
         curlInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 const url = curlInput.value.trim();
                 if (!url) return;
-                curlStatus.innerText = "Sending...";
-                curlStatus.style.color = "var(--cyan)";
-                const currentIp = hostIpInput.value.trim() || "10.8.0.12";
-                const target = `http://${currentIp}:7979/${url}`;
-                
-                fetch(target, { mode: 'no-cors' })
+                curlStatus.innerText = "SND...";
+                const currentIp = hostIpInput.value.trim();
+                fetch(`http://${currentIp}:7979/${url}`, { mode: 'no-cors' })
                     .then(() => {
-                        curlStatus.innerText = "Sent!";
-                        curlStatus.style.color = "#00ff00";
+                        curlStatus.innerText = "SENT";
                         curlInput.value = "";
-                        setTimeout(() => {
-                            curlStatus.innerText = "Ready";
-                            curlStatus.style.color = "#555";
-                        }, 2000);
+                        setTimeout(() => curlStatus.innerText = "Ready", 2000);
                     })
-                    .catch(() => {
-                        curlStatus.innerText = "Error";
-                        curlStatus.style.color = "#ea4335";
-                    });
+                    .catch(() => curlStatus.innerText = "ERR");
             }
         });
 
-        // --- Bluetooth Logic ---
         const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
         const CHAR_UUID = '87654321-4321-8765-4321-876543210987';
 
         async function connectAndSend() {
-            const ssid = document.getElementById('ssid').value;
-            const pass = document.getElementById('pass').value;
+            const ssid = ssidInput.value.trim();
+            const pass = passInput.value.trim();
+
+            // Clear previous error styles
+            ssidInput.classList.remove('error');
+            passInput.classList.remove('error');
 
             if (!ssid || !pass) { 
-                updateStatus("ERR: Missing Data", "#ea4335"); 
+                updateStatus("ERR: Missing Data", "#ff4444");
+                if(!ssid) ssidInput.classList.add('error');
+                if(!pass) passInput.classList.add('error');
                 return; 
             }
 
             try {
-                toggleUI(true);
+                toggleLoader(true);
                 updateStatus("Scanning...");
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'tinyDJ' }, { namePrefix: 'PiZero' }, { namePrefix: 'BlueZ' }],
@@ -209,49 +230,43 @@
 
                 updateStatus("Connecting...");
                 const server = await device.gatt.connect();
+                updateStatus("Getting Service...");
                 const service = await server.getPrimaryService(SERVICE_UUID);
-                const characteristic = await service.getCharacteristic(CHAR_UUID);
-
                 updateStatus("Writing...");
+                const characteristic = await service.getCharacteristic(CHAR_UUID);
                 const data = JSON.stringify({ ssid, pass });
-                const encoder = new TextEncoder();
-                await characteristic.writeValueWithoutResponse(encoder.encode(data));
+                await characteristic.writeValueWithoutResponse(new TextEncoder().encode(data));
 
-                updateStatus("SUCCESS", "#00ffff");
+                updateStatus("SUCCESS", "var(--cyan)");
                 setTimeout(() => {
                     device.gatt.disconnect();
-                    updateStatus("Ready", "#888");
+                    updateStatus("Ready", "#555");
+                    toggleLoader(false);
+                    toggleModal(); 
                 }, 2000);
-                toggleUI(false);
 
             } catch (err) {
-                updateStatus("ERR: " + err.message, "#ea4335");
-                toggleUI(false);
+                updateStatus("ERR: " + err.message.substring(0,20), "#ff4444");
+                toggleLoader(false);
             }
         }
 
-        function updateStatus(msg, color = "#888") {
-            const status = document.getElementById('status');
-            status.innerText = msg;
-            status.style.color = color;
+        function updateStatus(msg, color = "#555") {
+            const s = document.getElementById('status');
+            s.innerText = msg;
+            s.style.color = color;
         }
 
-        function toggleUI(loading) {
+        function toggleLoader(loading) {
             document.getElementById('loader').style.display = loading ? "block" : "none";
-            document.getElementById('mainBtn').disabled = loading;
+            document.getElementById('btBtn').disabled = loading;
         }
 
-        // Keyboard Shortcuts
         document.addEventListener('keydown', (e) => {
-            // Don't trigger if typing in an input field
             if (document.activeElement.tagName === 'INPUT') return;
-            
             if (e.key === 'ArrowLeft') hitEndpoint('ui/prev');
             if (e.key === 'ArrowRight') hitEndpoint('ui/next');
-            if (e.code === 'Space') {
-                e.preventDefault(); // Prevent page scroll
-                hitEndpoint('pause');
-            }
+            if (e.code === 'Space') { e.preventDefault(); hitEndpoint('pause'); }
         });
     </script>
 </body>
