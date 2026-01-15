@@ -40,7 +40,6 @@
         .loader { display: none; width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 15px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Shared Bar Styling */
         .bottom-bar, .top-bar {
             position: fixed; left: 0; right: 0; background: #111; padding: 10px 20px;
             border-top: 1px solid #333; display: flex; align-items: center; gap: 12px; z-index: 100;
@@ -51,7 +50,6 @@
         .bar-input { margin-bottom: 0; font-family: monospace; font-size: 12px; background: #000; border: 1px solid #333; border-radius: 8px; padding: 8px 12px; width: 140px; color: var(--cyan); }
         .bar-label { margin-bottom: 0; color: var(--cyan); font-size: 10px; font-weight: 700; text-transform: uppercase; }
 
-        /* Nav Link Buttons */
         .nav-group { display: flex; gap: 8px; }
         .nav-btn {
             background: #1a0026; border: 1px solid var(--accent); color: var(--accent);
@@ -78,7 +76,7 @@
 
     <div class="card">
         <div class="ascii-header">
-   __  _                ____     _
+   __  _                 ____     _
   / /_(_)___  __  __    / __ \   (_)
  / __/ / __ \/ / / /   / / / /  / / 
 / /_/ / / / / /_/ /   / /_/ /  / /  
@@ -106,7 +104,7 @@
 
     <div class="bottom-bar">
         <label class="bar-label" style="color: var(--cyan);">REMOTE</label>
-        <input type="text" id="curlInput" class="bar-input" style="flex-grow: 1; color: white;" placeholder="Paste URL and press Enter..." spellcheck="false">
+        <input type="text" id="curlInput" class="bar-input" style="flex-grow: 1; color: white;" placeholder="Paste raw URL and press Enter..." spellcheck="false">
         <div id="curlStatus" style="font-size: 11px; font-family: monospace; color: #555; min-width: 60px;">Ready</div>
     </div>
 
@@ -124,39 +122,31 @@
             localStorage.setItem('tinyDjHostIp', hostIpInput.value.trim());
         });
 
-        // --- Smart Curl Logic ---
+        // --- RAW CAST LOGIC ---
         const curlInput = document.getElementById('curlInput');
         const curlStatus = document.getElementById('curlStatus');
 
-        curlInput.addEventListener('keypress', async (e) => {
+        curlInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                let url = curlInput.value.trim();
+                const url = curlInput.value.trim();
                 if (!url) return;
 
-                curlStatus.innerText = "Check...";
+                curlStatus.innerText = "Sending...";
                 curlStatus.style.color = "var(--cyan)";
-
-                if (!url.match(/\.(mkv|mp4|mp3|avi|m3u8)$/i)) {
-                    try {
-                        const playlistUrl = url.endsWith('/') ? url + 'playlist' : url + '/playlist';
-                        const response = await fetch(playlistUrl);
-                        const text = await response.text();
-                        const foundUrl = text.split('\n').find(line => line.trim().startsWith('http'));
-                        if (foundUrl) url = foundUrl.trim();
-                    } catch (err) {
-                        console.log("Using original URL");
-                    }
-                }
 
                 const currentIp = hostIpInput.value.trim() || "10.8.0.12";
                 const target = `http://${currentIp}:7979/${url}`;
                 
+                // Simplified fetch: no parsing, no checks, just fire the URL
                 fetch(target, { mode: 'no-cors' })
                     .then(() => {
                         curlStatus.innerText = "Sent!";
                         curlStatus.style.color = "#00ff00";
                         curlInput.value = "";
-                        setTimeout(() => curlStatus.innerText = "Ready", 2000);
+                        setTimeout(() => {
+                            curlStatus.innerText = "Ready";
+                            curlStatus.style.color = "#555";
+                        }, 2000);
                     })
                     .catch(() => {
                         curlStatus.innerText = "Error";
