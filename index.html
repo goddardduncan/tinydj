@@ -35,6 +35,16 @@
         }
         button:active { transform: scale(0.98); }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Control Button Group */
+        .nav-controls { display: flex; gap: 10px; margin-top: 15px; }
+        .ctrl-btn { 
+            background: #252525; border: 1px solid #444; color: var(--cyan); 
+            padding: 12px; border-radius: 12px; font-family: monospace; font-weight: bold; 
+            cursor: pointer; flex: 1; transition: all 0.2s;
+        }
+        .ctrl-btn:hover { background: #333; border-color: var(--cyan); }
+        .ctrl-btn:active { background: var(--cyan); color: #000; }
         
         #status { margin-top: 24px; font-size: 13px; color: #666; font-family: monospace; min-height: 1.2em; }
         .loader { display: none; width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 15px auto; }
@@ -76,7 +86,7 @@
 
     <div class="card">
         <div class="ascii-header">
-   __  _                 ____     _
+   __  _                ____     _
   / /_(_)___  __  __    / __ \   (_)
  / __/ / __ \/ / / /   / / / /  / / 
 / /_/ / / / / /_/ /   / /_/ /  / /  
@@ -97,7 +107,14 @@
             <input type="password" id="pass" placeholder="••••••••">
         </div>
         
-        <button id="mainBtn" onclick="connectAndSend()">Connect to tinyDJ and Setup Wifi</button>
+        <button id="mainBtn" onclick="connectAndSend()">Connect & Setup Wifi</button>
+        
+        <div class="nav-controls">
+            <button class="ctrl-btn" onclick="hitEndpoint('ui/prev')">&lt;</button>
+            <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
+            <button class="ctrl-btn" onclick="hitEndpoint('ui/next')">&gt;</button>
+        </div>
+
         <div class="loader" id="loader"></div>
         <div id="status">Ready</div>
     </div>
@@ -109,9 +126,11 @@
     </div>
 
     <script>
-        // --- Persistence Logic ---
         const hostIpInput = document.getElementById('hostIp');
-        
+        const curlInput = document.getElementById('curlInput');
+        const curlStatus = document.getElementById('curlStatus');
+
+        // --- Persistence Logic ---
         window.addEventListener('DOMContentLoaded', () => {
             const savedIp = localStorage.getItem('tinyDjHostIp');
             if (savedIp) hostIpInput.value = savedIp;
@@ -122,22 +141,33 @@
             localStorage.setItem('tinyDjHostIp', hostIpInput.value.trim());
         });
 
-        // --- RAW CAST LOGIC ---
-        const curlInput = document.getElementById('curlInput');
-        const curlStatus = document.getElementById('curlStatus');
+        // --- Navigation Logic (<, >, EPG) ---
+        async function hitEndpoint(path) {
+            const currentIp = hostIpInput.value.trim() || "10.8.0.12";
+            const target = `http://${currentIp}:7979/${path}`;
+            
+            updateStatus(`Sending ${path}...`, "var(--cyan)");
 
+            fetch(target, { mode: 'no-cors' })
+                .then(() => {
+                    updateStatus("Sent!", "#00ff00");
+                    setTimeout(() => updateStatus("Ready"), 1500);
+                })
+                .catch(() => {
+                    updateStatus("Remote Error", "#ea4335");
+                });
+        }
+
+        // --- RAW CAST LOGIC ---
         curlInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 const url = curlInput.value.trim();
                 if (!url) return;
-
                 curlStatus.innerText = "Sending...";
                 curlStatus.style.color = "var(--cyan)";
-
                 const currentIp = hostIpInput.value.trim() || "10.8.0.12";
                 const target = `http://${currentIp}:7979/${url}`;
                 
-                // Simplified fetch: no parsing, no checks, just fire the URL
                 fetch(target, { mode: 'no-cors' })
                     .then(() => {
                         curlStatus.innerText = "Sent!";
@@ -209,6 +239,13 @@
             document.getElementById('loader').style.display = loading ? "block" : "none";
             document.getElementById('mainBtn').disabled = loading;
         }
+
+        // Optional: Keyboard listener for Arrow Keys
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            if (e.key === 'ArrowLeft') hitEndpoint('ui/prev');
+            if (e.key === 'ArrowRight') hitEndpoint('ui/next');
+        });
     </script>
 </body>
 </html>
