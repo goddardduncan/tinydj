@@ -40,7 +40,6 @@
         .loader { display: none; width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 15px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Shared Bar Styling */
         .bottom-bar, .top-bar {
             position: fixed; left: 0; right: 0; background: #111; padding: 10px 20px;
             border-top: 1px solid #333; display: flex; align-items: center; gap: 12px; z-index: 100;
@@ -51,7 +50,6 @@
         .bar-input { margin-bottom: 0; font-family: monospace; font-size: 12px; background: #000; border: 1px solid #333; border-radius: 8px; padding: 8px 12px; width: 140px; color: var(--cyan); }
         .bar-label { margin-bottom: 0; color: var(--cyan); font-size: 10px; font-weight: 700; text-transform: uppercase; }
 
-        /* Nav Link Buttons */
         .nav-group { display: flex; gap: 8px; }
         .nav-btn {
             background: #1a0026; border: 1px solid var(--accent); color: var(--accent);
@@ -71,7 +69,7 @@
             <a href="https://rps.dunc.app" target="_blank" class="nav-btn">PSEARCH</a>
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
-            <label class="bar-label">WG-IP</label>
+            <label class="bar-label">Host IP</label>
             <input type="text" id="hostIp" class="bar-input" placeholder="10.8.0.12" spellcheck="false">
         </div>
     </div>
@@ -111,20 +109,17 @@
     </div>
 
     <script>
-        // --- Persistence Logic ---
         const hostIpInput = document.getElementById('hostIp');
         
         window.addEventListener('DOMContentLoaded', () => {
             const savedIp = localStorage.getItem('tinyDjHostIp');
-            if (savedIp) hostIpInput.value = savedIp;
-            else hostIpInput.value = "10.8.0.12";
+            hostIpInput.value = savedIp || "10.8.0.12";
         });
 
         hostIpInput.addEventListener('input', () => {
             localStorage.setItem('tinyDjHostIp', hostIpInput.value.trim());
         });
 
-        // --- Smart Curl Logic ---
         const curlInput = document.getElementById('curlInput');
         const curlStatus = document.getElementById('curlStatus');
 
@@ -133,21 +128,42 @@
                 let url = curlInput.value.trim();
                 if (!url) return;
 
-                curlStatus.innerText = "Check...";
+                curlStatus.innerText = "Parsing...";
                 curlStatus.style.color = "var(--cyan)";
 
-                if (!url.match(/\.(mkv|mp4|mp3|avi|m3u8)$/i)) {
+                // Step 1: Force resolve the playlist content locally
+                if (url.includes('/playlist') || !url.match(/\.(mkv|mp4|mp3|avi)$/i)) {
                     try {
-                        const playlistUrl = url.endsWith('/') ? url + 'playlist' : url + '/playlist';
-                        const response = await fetch(playlistUrl);
+                        const targetPlaylist = url.endsWith('/playlist') ? url : url.replace(/\/$/, '') + '/playlist';
+                        console.log("Fetching playlist from:", targetPlaylist);
+                        
+                        const response = await fetch(targetPlaylist);
                         const text = await response.text();
-                        const foundUrl = text.split('\n').find(line => line.trim().startsWith('http'));
-                        if (foundUrl) url = foundUrl.trim();
+                        
+                        // M3U8 lines: skip comments and find the first file path
+                        const lines = text.split('\n').map(l => l.trim());
+                        const foundPath = lines.find(line => line && !line.startsWith('#'));
+
+                        if (foundPath) {
+                            if (foundPath.startsWith('http')) {
+                                url = foundPath;
+                            } else {
+                                // Resolve relative path against the playlist URL
+                                const urlObj = new URL(foundPath, targetPlaylist);
+                                url = urlObj.href;
+                            }
+                            console.log("Resolved Stream URL:", url);
+                        }
                     } catch (err) {
-                        console.log("Using original URL");
+                        console.error("CORS or Fetch error - Browser blocked playlist read:", err);
+                        // If this happens, we alert the user
+                        curlStatus.innerText = "CORS ERR";
+                        curlStatus.style.color = "#ea4335";
+                        return; 
                     }
                 }
 
+                // Step 2: Send the direct stream URL to tinyDJ
                 const currentIp = hostIpInput.value.trim() || "10.8.0.12";
                 const target = `http://${currentIp}:7979/${url}`;
                 
@@ -159,7 +175,7 @@
                         setTimeout(() => curlStatus.innerText = "Ready", 2000);
                     })
                     .catch(() => {
-                        curlStatus.innerText = "Error";
+                        curlStatus.innerText = "Host Err";
                         curlStatus.style.color = "#ea4335";
                     });
             }
@@ -172,12 +188,7 @@
         async function connectAndSend() {
             const ssid = document.getElementById('ssid').value;
             const pass = document.getElementById('pass').value;
-
-            if (!ssid || !pass) { 
-                updateStatus("ERR: Missing Data", "#ea4335"); 
-                return; 
-            }
-
+            if (!ssid || !pass) { updateStatus("ERR: Missing Data", "#ea4335"); return; }
             try {
                 toggleUI(true);
                 updateStatus("Scanning...");
@@ -185,24 +196,16 @@
                     filters: [{ namePrefix: 'tinyDJ' }, { namePrefix: 'PiZero' }, { namePrefix: 'BlueZ' }],
                     optionalServices: [SERVICE_UUID] 
                 });
-
                 updateStatus("Connecting...");
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 const characteristic = await service.getCharacteristic(CHAR_UUID);
-
                 updateStatus("Writing...");
                 const data = JSON.stringify({ ssid, pass });
-                const encoder = new TextEncoder();
-                await characteristic.writeValueWithoutResponse(encoder.encode(data));
-
+                await characteristic.writeValueWithoutResponse(new TextEncoder().encode(data));
                 updateStatus("SUCCESS", "#00ffff");
-                setTimeout(() => {
-                    device.gatt.disconnect();
-                    updateStatus("Ready", "#888");
-                }, 2000);
+                setTimeout(() => { device.gatt.disconnect(); updateStatus("Ready", "#888"); }, 2000);
                 toggleUI(false);
-
             } catch (err) {
                 updateStatus("ERR: " + err.message, "#ea4335");
                 toggleUI(false);
