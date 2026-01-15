@@ -40,16 +40,24 @@
         .loader { display: none; width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 15px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Bottom Bar Styling */
-        .bottom-bar {
-            position: fixed; bottom: 0; left: 0; right: 0; background: #111; padding: 12px 20px;
+        /* Shared Bar Styling */
+        .bottom-bar, .top-bar {
+            position: fixed; left: 0; right: 0; background: #111; padding: 12px 20px;
             border-top: 1px solid #333; display: flex; align-items: center; gap: 12px; z-index: 100;
         }
-        .bottom-bar input { margin-bottom: 0; font-family: monospace; font-size: 13px; background: #000; padding: 10px; }
-        .bottom-bar label { margin-bottom: 0; color: var(--cyan); font-size: 10px; }
+        .bottom-bar { bottom: 0; }
+        .top-bar { top: 0; border-top: none; border-bottom: 1px solid #333; justify-content: flex-end; }
+        
+        .bar-input { margin-bottom: 0; font-family: monospace; font-size: 13px; background: #000; padding: 10px; width: 180px; }
+        .bar-label { margin-bottom: 0; color: var(--cyan); font-size: 10px; font-weight: 700; text-transform: uppercase; }
     </style>
 </head>
 <body>
+
+    <div class="top-bar">
+        <label class="bar-label">Wireguard IP</label>
+        <input type="text" id="hostIp" class="bar-input" placeholder="10.8.0.12" spellcheck="false">
+    </div>
 
     <div class="card">
         <div class="ascii-header">
@@ -80,13 +88,28 @@
     </div>
 
     <div class="bottom-bar">
-        <label>REMOTE</label>
-        <input type="text" id="curlInput" placeholder="Paste URL and press Enter..." spellcheck="false">
+        <label class="bar-label">REMOTE</label>
+        <input type="text" id="curlInput" class="bar-input" style="flex-grow: 1;" placeholder="Paste URL and press Enter..." spellcheck="false">
         <div id="curlStatus" style="font-size: 11px; font-family: monospace; color: #555; min-width: 70px;">Ready</div>
     </div>
 
     <script>
-        // --- Smart Curl Logic (From File 1) ---
+        // --- Persistence Logic ---
+        const hostIpInput = document.getElementById('hostIp');
+        
+        // Load saved IP on startup
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedIp = localStorage.getItem('tinyDjHostIp');
+            if (savedIp) hostIpInput.value = savedIp;
+            else hostIpInput.value = "10.8.0.12"; // Default
+        });
+
+        // Save IP whenever it changes
+        hostIpInput.addEventListener('input', () => {
+            localStorage.setItem('tinyDjHostIp', hostIpInput.value.trim());
+        });
+
+        // --- Smart Curl Logic ---
         const curlInput = document.getElementById('curlInput');
         const curlStatus = document.getElementById('curlStatus');
 
@@ -110,7 +133,8 @@
                     }
                 }
 
-                const target = `http://10.8.0.12:7979/${url}`;
+                const currentIp = hostIpInput.value.trim() || "10.8.0.12";
+                const target = `http://${currentIp}:7979/${url}`;
                 
                 fetch(target, { mode: 'no-cors' })
                     .then(() => {
@@ -126,7 +150,7 @@
             }
         });
 
-        // --- Bluetooth Logic (Enhanced with File 2 Granularity) ---
+        // --- Bluetooth Logic ---
         const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
         const CHAR_UUID = '87654321-4321-8765-4321-876543210987';
 
@@ -141,9 +165,7 @@
 
             try {
                 toggleUI(true);
-                
-                // Detailed Steps
-                updateStatus("Scanning for tinyDJ devices...");
+                updateStatus("Scanning...");
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [
                         { namePrefix: 'tinyDJ' }, 
@@ -153,34 +175,31 @@
                     optionalServices: [SERVICE_UUID] 
                 });
 
-                updateStatus("Establishing GATT Connection...");
+                updateStatus("Connecting GATT...");
                 const server = await device.gatt.connect();
 
-                updateStatus("Discovering Services...");
+                updateStatus("Discovering...");
                 const service = await server.getPrimaryService(SERVICE_UUID);
-                
-                updateStatus("Locating Characteristic...");
                 const characteristic = await service.getCharacteristic(CHAR_UUID);
 
-                updateStatus("Writing Data...");
+                updateStatus("Writing...");
                 const data = JSON.stringify({ ssid, pass });
                 const encoder = new TextEncoder();
                 
-                // Write without response to avoid common GATT errors
                 await characteristic.writeValueWithoutResponse(encoder.encode(data));
 
-                updateStatus("SUCCESS: WiFi details uploaded", "#00ffff");
+                updateStatus("SUCCESS", "#00ffff");
                 
                 setTimeout(() => {
                     device.gatt.disconnect();
-                    updateStatus("Disconnected safely.", "#888");
-                }, 1500);
+                    updateStatus("Ready", "#888");
+                }, 2000);
                 
                 toggleUI(false);
 
             } catch (err) {
-                console.error("Bluetooth Error Trace:", err);
-                updateStatus("CRITICAL ERR: " + err.message, "#ea4335");
+                console.error(err);
+                updateStatus("ERR: " + err.message, "#ea4335");
                 toggleUI(false);
             }
         }
@@ -194,7 +213,6 @@
         function toggleUI(loading) {
             document.getElementById('loader').style.display = loading ? "block" : "none";
             document.getElementById('mainBtn').disabled = loading;
-            if (loading) updateStatus("Working...");
         }
     </script>
 </body>
