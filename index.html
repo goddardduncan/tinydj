@@ -128,19 +128,21 @@
                 let url = curlInput.value.trim();
                 if (!url) return;
 
-                curlStatus.innerText = "Parsing...";
+                curlStatus.innerText = "Proxying...";
                 curlStatus.style.color = "var(--cyan)";
 
-                // Step 1: Force resolve the playlist content locally
+                // Step 1: Resolve playlist using a CORS Proxy
                 if (url.includes('/playlist') || !url.match(/\.(mkv|mp4|mp3|avi)$/i)) {
                     try {
                         const targetPlaylist = url.endsWith('/playlist') ? url : url.replace(/\/$/, '') + '/playlist';
-                        console.log("Fetching playlist from:", targetPlaylist);
                         
-                        const response = await fetch(targetPlaylist);
-                        const text = await response.text();
+                        // Using AllOrigins Proxy to bypass CORS and Mixed Content restrictions
+                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetPlaylist)}`;
                         
-                        // M3U8 lines: skip comments and find the first file path
+                        const response = await fetch(proxyUrl);
+                        const data = await response.json();
+                        const text = data.contents; // The actual playlist text
+                        
                         const lines = text.split('\n').map(l => l.trim());
                         const foundPath = lines.find(line => line && !line.startsWith('#'));
 
@@ -148,25 +150,24 @@
                             if (foundPath.startsWith('http')) {
                                 url = foundPath;
                             } else {
-                                // Resolve relative path against the playlist URL
                                 const urlObj = new URL(foundPath, targetPlaylist);
                                 url = urlObj.href;
                             }
-                            console.log("Resolved Stream URL:", url);
+                            console.log("Resolved Stream URL via Proxy:", url);
                         }
                     } catch (err) {
-                        console.error("CORS or Fetch error - Browser blocked playlist read:", err);
-                        // If this happens, we alert the user
-                        curlStatus.innerText = "CORS ERR";
+                        console.error("Proxy fetch failed:", err);
+                        curlStatus.innerText = "Fetch Err";
                         curlStatus.style.color = "#ea4335";
                         return; 
                     }
                 }
 
-                // Step 2: Send the direct stream URL to tinyDJ
+                // Step 2: Send resolved URL to tinyDJ
                 const currentIp = hostIpInput.value.trim() || "10.8.0.12";
                 const target = `http://${currentIp}:7979/${url}`;
                 
+                // Note: fetch to local IP remains no-cors fire-and-forget
                 fetch(target, { mode: 'no-cors' })
                     .then(() => {
                         curlStatus.innerText = "Sent!";
@@ -181,10 +182,7 @@
             }
         });
 
-        // --- Bluetooth Logic ---
-        const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
-        const CHAR_UUID = '87654321-4321-8765-4321-876543210987';
-
+        // Bluetooth Logic remains unchanged
         async function connectAndSend() {
             const ssid = document.getElementById('ssid').value;
             const pass = document.getElementById('pass').value;
@@ -194,15 +192,14 @@
                 updateStatus("Scanning...");
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'tinyDJ' }, { namePrefix: 'PiZero' }, { namePrefix: 'BlueZ' }],
-                    optionalServices: [SERVICE_UUID] 
+                    optionalServices: ['12345678-1234-5678-1234-567812345678'] 
                 });
                 updateStatus("Connecting...");
                 const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                const characteristic = await service.getCharacteristic(CHAR_UUID);
+                const service = await server.getPrimaryService('12345678-1234-5678-1234-567812345678');
+                const characteristic = await service.getCharacteristic('87654321-4321-8765-4321-876543210987');
                 updateStatus("Writing...");
-                const data = JSON.stringify({ ssid, pass });
-                await characteristic.writeValueWithoutResponse(new TextEncoder().encode(data));
+                await characteristic.writeValueWithoutResponse(new TextEncoder().encode(JSON.stringify({ ssid, pass })));
                 updateStatus("SUCCESS", "#00ffff");
                 setTimeout(() => { device.gatt.disconnect(); updateStatus("Ready", "#888"); }, 2000);
                 toggleUI(false);
