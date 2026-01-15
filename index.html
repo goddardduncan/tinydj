@@ -37,11 +37,11 @@
         button:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* Control Button Group */
-        .nav-controls { display: flex; gap: 10px; margin-top: 15px; }
+        .nav-controls { display: flex; gap: 8px; margin-top: 15px; }
         .ctrl-btn { 
             background: #252525; border: 1px solid #444; color: var(--cyan); 
-            padding: 12px; border-radius: 12px; font-family: monospace; font-weight: bold; 
-            cursor: pointer; flex: 1; transition: all 0.2s;
+            padding: 12px 8px; border-radius: 12px; font-family: monospace; font-weight: bold; 
+            cursor: pointer; flex: 1; transition: all 0.2s; font-size: 12px;
         }
         .ctrl-btn:hover { background: #333; border-color: var(--cyan); }
         .ctrl-btn:active { background: var(--cyan); color: #000; }
@@ -110,9 +110,10 @@
         <button id="mainBtn" onclick="connectAndSend()">Connect & Setup Wifi</button>
         
         <div class="nav-controls">
-            <button class="ctrl-btn" onclick="hitEndpoint('ui/prev')">&lt;</button>
+            <button class="ctrl-btn" onclick="hitEndpoint('ui/prev')">PREV</button>
+            <button class="ctrl-btn" onclick="hitEndpoint('pause')" title="Spacebar">PLAY/PAUSE</button>
             <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
-            <button class="ctrl-btn" onclick="hitEndpoint('ui/next')">&gt;</button>
+            <button class="ctrl-btn" onclick="hitEndpoint('ui/next')">NEXT</button>
         </div>
 
         <div class="loader" id="loader"></div>
@@ -141,12 +142,12 @@
             localStorage.setItem('tinyDjHostIp', hostIpInput.value.trim());
         });
 
-        // --- Navigation Logic (<, >, EPG) ---
+        // --- Navigation Logic ---
         async function hitEndpoint(path) {
             const currentIp = hostIpInput.value.trim() || "10.8.0.12";
             const target = `http://${currentIp}:7979/${path}`;
             
-            updateStatus(`Sending ${path}...`, "var(--cyan)");
+            updateStatus(`${path.toUpperCase()}...`, "var(--cyan)");
 
             fetch(target, { mode: 'no-cors' })
                 .then(() => {
@@ -240,11 +241,17 @@
             document.getElementById('mainBtn').disabled = loading;
         }
 
-        // Optional: Keyboard listener for Arrow Keys
+        // Keyboard Shortcuts
         document.addEventListener('keydown', (e) => {
+            // Don't trigger if typing in an input field
             if (document.activeElement.tagName === 'INPUT') return;
+            
             if (e.key === 'ArrowLeft') hitEndpoint('ui/prev');
             if (e.key === 'ArrowRight') hitEndpoint('ui/next');
+            if (e.code === 'Space') {
+                e.preventDefault(); // Prevent page scroll
+                hitEndpoint('pause');
+            }
         });
     </script>
 </body>
