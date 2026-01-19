@@ -86,7 +86,7 @@
 
     <div class="card">
         <div class="ascii-header">
-  __  _                 ____    _
+  __  _                ____    _
   / /_(_)___  __  __    / __ \  (_)
  / __/ / __ \/ / / /   / / / / / / 
 / /_/ / / / / /_/ /   / /_/ / / /  
@@ -153,26 +153,106 @@
         const ssidInput = document.getElementById('ssid');
         const passInput = document.getElementById('pass');
 
+        // Configuration matching the tinyDJ server
+        const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
+        const WRITE_CHAR_UUID = '87654321-4321-8765-4321-876543210987';
+        const IP_READ_CHAR_UUID = '66666666-4444-4444-4444-666666666666';
+
         window.addEventListener('DOMContentLoaded', () => {
+            // Updated key name to match your request for tinyDjWlanIp logic
             const savedIp = localStorage.getItem('tinyDjHostIp') || "10.8.0.12";
             hostIpInput.value = savedIp;
             ipDisplay.innerText = `IP: ${savedIp}`;
         });
 
+        // Manual override from settings
         hostIpInput.addEventListener('input', () => {
-            const val = hostIpInput.value.trim();
-            localStorage.setItem('tinyDjHostIp', val);
-            ipDisplay.innerText = `IP: ${val}`;
+            updateSavedIp(hostIpInput.value.trim());
         });
+
+        function updateSavedIp(ip) {
+            localStorage.setItem('tinyDjHostIp', ip);
+            hostIpInput.value = ip;
+            ipDisplay.innerText = `IP: ${ip}`;
+        }
 
         function toggleModal() {
             modal.classList.toggle('modal-open');
-            // Clear errors when opening/closing
             ssidInput.classList.remove('error');
             passInput.classList.remove('error');
         }
 
         window.onclick = (e) => { if (e.target == modal) toggleModal(); }
+
+        async function connectAndSend() {
+            const ssid = ssidInput.value.trim();
+            const pass = passInput.value.trim();
+
+            if (!ssid || !pass) { 
+                updateStatus("Wifi details required", "#ff4444");
+                if(!ssid) ssidInput.classList.add('error');
+                if(!pass) passInput.classList.add('error');
+                return; 
+            }
+
+            try {
+                toggleLoader(true);
+                updateStatus("Scanning for tinyDJ...");
+                
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ namePrefix: 'tinyDJ' }],
+                    optionalServices: [SERVICE_UUID] 
+                });
+
+                updateStatus("Connecting...");
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+
+                // Step 1: Write Credentials
+                updateStatus("Sending WiFi...");
+                const writeChar = await service.getCharacteristic(WRITE_CHAR_UUID);
+                const encoder = new TextEncoder();
+                await writeChar.writeValueWithoutResponse(encoder.encode(JSON.stringify({ ssid, pass })));
+
+                // Step 2: Subscribe to IP Updates
+                updateStatus("Waiting for IP...");
+                const ipChar = await service.getCharacteristic(IP_READ_CHAR_UUID);
+                await ipChar.startNotifications();
+
+                ipChar.addEventListener('characteristicvaluechanged', (event) => {
+                    const value = event.target.value;
+                    const decodedIp = new TextDecoder().decode(value);
+                    
+                    // Filter out initial or empty values
+                    if (decodedIp && decodedIp !== "0.0.0.0" && decodedIp.includes('.')) {
+                        console.log("📍 IP Received:", decodedIp);
+                        updateSavedIp(decodedIp);
+                        updateStatus("IP CAPTURED!", "var(--cyan)");
+
+                        // Auto-cleanup and close
+                        setTimeout(() => {
+                            device.gatt.disconnect();
+                            toggleLoader(false);
+                            toggleModal();
+                            updateStatus("Ready", "#555");
+                        }, 2000);
+                    }
+                });
+
+                // Safety timeout if hardware fails to connect to WiFi
+                setTimeout(() => {
+                    if (document.getElementById('status').innerText === "WAITING FOR IP...") {
+                        updateStatus("IP TIMEOUT - RECHECK WIFI", "#ffa500");
+                        toggleLoader(false);
+                    }
+                }, 45000);
+
+            } catch (err) {
+                console.error(err);
+                updateStatus("ERR: " + err.message.substring(0,25), "#ff4444");
+                toggleLoader(false);
+            }
+        }
 
         async function hitEndpoint(path) {
             const currentIp = hostIpInput.value.trim() || "10.8.0.12";
@@ -202,55 +282,6 @@
                     .catch(() => curlStatus.innerText = "ERR");
             }
         });
-
-        const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
-        const CHAR_UUID = '87654321-4321-8765-4321-876543210987';
-
-        async function connectAndSend() {
-            const ssid = ssidInput.value.trim();
-            const pass = passInput.value.trim();
-
-            // Clear previous error styles
-            ssidInput.classList.remove('error');
-            passInput.classList.remove('error');
-
-            if (!ssid || !pass) { 
-                updateStatus("Wifi details unchanged", "#ff4444");
-                if(!ssid) ssidInput.classList.add('error');
-                if(!pass) passInput.classList.add('error');
-                return; 
-            }
-
-            try {
-                toggleLoader(true);
-                updateStatus("Scanning...");
-                const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ namePrefix: 'tinyDJ' }, { namePrefix: 'PiZero' }, { namePrefix: 'BlueZ' }],
-                    optionalServices: [SERVICE_UUID] 
-                });
-
-                updateStatus("Connecting...");
-                const server = await device.gatt.connect();
-                updateStatus("Getting Service...");
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                updateStatus("Writing...");
-                const characteristic = await service.getCharacteristic(CHAR_UUID);
-                const data = JSON.stringify({ ssid, pass });
-                await characteristic.writeValueWithoutResponse(new TextEncoder().encode(data));
-
-                updateStatus("SUCCESS", "var(--cyan)");
-                setTimeout(() => {
-                    device.gatt.disconnect();
-                    updateStatus("Ready", "#555");
-                    toggleLoader(false);
-                    toggleModal(); 
-                }, 2000);
-
-            } catch (err) {
-                updateStatus("ERR: " + err.message.substring(0,20), "#ff4444");
-                toggleLoader(false);
-            }
-        }
 
         function updateStatus(msg, color = "#555") {
             const s = document.getElementById('status');
