@@ -78,7 +78,7 @@
         <div class="nav-group">
             <a id="list-link" href="https://list.dunc.app" target="_blank" class="nav-btn">LIST</a>
             <a id="rqbit-link" href="https://rbit.dunc.app" target="_blank" class="nav-btn">BIT</a>
-            <a href="https://rbox.dunc.app" target="_blank" class="nav-btn">BOX</a> 
+            <a id="box-link" href="https://rbox.dunc.app" target="_blank" class="nav-btn">BOX</a> 
             <a id="psearch-link" href="https://rps.dunc.app" target="_blank" class="nav-btn">PSEARCH</a>
             <a id="tf-link" href="https://tf.dunc.app" target="_blank" class="nav-btn">TF</a>
         </div>
@@ -131,7 +131,7 @@
 
             <div class="input-group">
                 <label>Host IP (Remote Control)</label>
-                <input type="text" id="hostIp" placeholder="10.8.0.12" spellcheck="false">
+                <input type="text" id="hostIp" placeholder="PLEASE CONNECT TO WIFI" spellcheck="false">
             </div>
 
             <button class="action-btn" id="btBtn" onclick="connectAndSync()">Sync WiFi & Get IP</button>
@@ -153,6 +153,7 @@
         const listLink = document.getElementById('list-link');
         const rqbitLink = document.getElementById('rqbit-link');
         const psearchLink = document.getElementById('psearch-link');
+        const boxLink = document.getElementById('box-link');
         const curlInput = document.getElementById('curlInput');
         const curlStatus = document.getElementById('curlStatus');
         const ssidInput = document.getElementById('ssid');
@@ -168,11 +169,13 @@
             const cleanIp = ip.trim();
             if (cleanIp && cleanIp !== "0.0.0.0" && cleanIp !== "--.--.--.--") {
                 tfLink.href = `http://${cleanIp}:8311`;
+                boxLink.href = `http://${cleanIp}:8303`;
                 psearchLink.href = `http://${cleanIp}:5010`;
                 rqbitLink.href = `http://${cleanIp}:3030`;
                 listLink.href = `http://${cleanIp}:8222`;
             } else {
                 tfLink.href = "https://tf.dunc.app";
+                boxLink.href = "https://rbox.dunc.app";
                 psearchLink.href = "https://rps.dunc.app";
                 rqbitLink.href = "https://rbit.dunc.app";
                 listLink.href = "https://list.dunc.app";
