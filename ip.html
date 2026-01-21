@@ -134,7 +134,7 @@
                 <input type="text" id="hostIp" placeholder="10.8.0.12" spellcheck="false">
             </div>
 
-            <button class="action-btn" id="btBtn" onclick="connectAndSend()">Connect & Auto-Sync IP</button>
+            <button class="action-btn" id="btBtn" onclick="connectAndSend()">Connect & Sync IP</button>
             <button class="ctrl-btn" style="width: 100%; margin-top: 8px; border-color: #555; color: #888;" onclick="toggleModal()">CLOSE</button>
         </div>
     </div>
@@ -154,6 +154,9 @@
         const ssidInput = document.getElementById('ssid');
         const passInput = document.getElementById('pass');
 
+        const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
+        const CHAR_UUID = '87654321-4321-8765-4321-876543210987';
+
         window.addEventListener('DOMContentLoaded', () => {
             const savedIp = localStorage.getItem('tinyDjHostIp') || "10.8.0.12";
             hostIpInput.value = savedIp;
@@ -168,8 +171,6 @@
 
         function toggleModal() {
             modal.classList.toggle('modal-open');
-            ssidInput.classList.remove('error');
-            passInput.classList.remove('error');
         }
 
         window.onclick = (e) => { if (e.target == modal) toggleModal(); }
@@ -203,23 +204,19 @@
             }
         });
 
-        const SERVICE_UUID = '12345678-1234-5678-1234-567812345678';
-        const CHAR_UUID = '87654321-4321-8765-4321-876543210987';
-
         async function connectAndSend() {
             const ssid = ssidInput.value.trim();
             const pass = passInput.value.trim();
 
             if (!ssid || !pass) { 
                 updateStatus("Check Wifi Details", "#ff4444");
-                if(!ssid) ssidInput.classList.add('error');
-                if(!pass) passInput.classList.add('error');
                 return; 
             }
 
             try {
                 toggleLoader(true);
                 updateStatus("Scanning...");
+                
                 const device = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'tinyDJ' }, { namePrefix: 'PiZero' }, { namePrefix: 'BlueZ' }],
                     optionalServices: [SERVICE_UUID] 
@@ -230,37 +227,40 @@
                 const service = await server.getPrimaryService(SERVICE_UUID);
                 const characteristic = await service.getCharacteristic(CHAR_UUID);
                 
-                updateStatus("Writing Wifi...");
-                const data = JSON.stringify({ ssid, pass });
-                // Use writeValueWithResponse to ensure it's received before polling
-                await characteristic.writeValue(new TextEncoder().encode(data));
+                // 1. Start Notification Listener
+                await characteristic.startNotifications();
+                console.log("Listening for IP notification...");
 
-                // Start IP Polling
-                let attempts = 0;
-                const pollForIp = async () => {
-                    if (attempts > 10) throw new Error("IP Sync Timeout");
-                    attempts++;
-                    updateStatus(`Syncing IP (${attempts}/10)...`, "var(--cyan)");
-                    
-                    await new Promise(r => setTimeout(r, 2000));
-                    const value = await characteristic.readValue();
-                    const str = new TextDecoder().decode(value);
-                    
-                    try {
-                        const parsed = JSON.parse(str);
-                        if (parsed.ip && parsed.ip !== "0.0.0.0") {
-                            hostIpInput.value = parsed.ip;
-                            ipDisplay.innerText = `IP: ${parsed.ip}`;
-                            localStorage.setItem('tinyDjHostIp', parsed.ip);
-                            return parsed.ip;
-                        }
-                    } catch(e) {}
-                    
-                    return pollForIp();
-                };
+                const ipFoundPromise = new Promise((resolve) => {
+                    characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                        const rawData = event.target.value;
+                        const decoded = new TextDecoder().decode(rawData);
+                        console.log("GATT PUSH:", decoded);
+                        try {
+                            const parsed = JSON.parse(decoded);
+                            if (parsed.ip && parsed.ip !== "0.0.0.0") {
+                                resolve(parsed.ip);
+                            }
+                        } catch(e) { console.warn("Partial push skipped"); }
+                    });
+                });
 
-                const newIp = await pollForIp();
-                updateStatus(`FOUND: ${newIp}`, "#00ff00");
+                // 2. Send the Credentials
+                updateStatus("Sending Wifi...");
+                const payload = JSON.stringify({ ssid, pass });
+                await characteristic.writeValue(new TextEncoder().encode(payload));
+                
+                updateStatus("Waiting for IP...", "var(--cyan)");
+
+                // 3. Race against a 30s timeout
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("IP Sync Timeout")), 30000));
+                const newIp = await Promise.race([ipFoundPromise, timeout]);
+
+                // 4. Success handling
+                hostIpInput.value = newIp;
+                ipDisplay.innerText = `IP: ${newIp}`;
+                localStorage.setItem('tinyDjHostIp', newIp);
+                updateStatus(`SYNCED: ${newIp}`, "#00ff00");
 
                 setTimeout(() => {
                     device.gatt.disconnect();
@@ -270,6 +270,7 @@
                 }, 2000);
 
             } catch (err) {
+                console.error("BT ERROR:", err);
                 updateStatus("ERR: " + err.message.substring(0,25), "#ff4444");
                 toggleLoader(false);
             }
