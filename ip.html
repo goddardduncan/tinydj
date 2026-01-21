@@ -183,7 +183,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            const savedIp = localStorage.getItem('tinyDjHostIp') || "10.8.0.12";
+            const savedIp = localStorage.getItem('tinyDjHostIp') || "tinydj.local";
             hostIpInput.value = savedIp;
             ipDisplay.innerText = `IP: ${savedIp}`;
             updateTfLink(savedIp);
@@ -205,7 +205,7 @@
         window.onclick = (e) => { if (e.target == modal) toggleModal(); }
 
         async function hitEndpoint(path) {
-            const currentIp = hostIpInput.value.trim() || "10.8.0.12";
+            const currentIp = hostIpInput.value.trim() || "tinydj.local";
             const target = `http://${currentIp}:7979/${path}`;
             updateStatus(`${path}...`, "var(--cyan)");
             
