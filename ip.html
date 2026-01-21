@@ -76,11 +76,11 @@
 
     <div class="top-bar">
         <div class="nav-group">
-            <a href="https://list.dunc.app" target="_blank" class="nav-btn">LIST</a>
-            <a href="https://rbit.dunc.app" target="_blank" class="nav-btn">RQBIT</a>
-            <a href="https://rbox.dunc.app" target="_blank" class="nav-btn">BOX</a>
-            <a href="https://rps.dunc.app" target="_blank" class="nav-btn">PSEARCH</a>
-            <a id="tf-link" href="#" target="_blank" class="nav-btn">TF</a>
+            <a id="list-link" href="https://list.dunc.app" target="_blank" class="nav-btn">LIST</a>
+            <a id="rqbit-link" href="https://rbit.dunc.app" target="_blank" class="nav-btn">BIT</a>
+            <a href="https://rbox.dunc.app" target="_blank" class="nav-btn">BOX</a> 
+            <a id="psearch-link" href="https://rps.dunc.app" target="_blank" class="nav-btn">PSEARCH</a>
+            <a id="tf-link" href="https://tf.dunc.app" target="_blank" class="nav-btn">TF</a>
         </div>
         <button class="settings-trigger" onclick="toggleModal()">SETTINGS</button>
     </div>
@@ -150,6 +150,9 @@
         const hostIpInput = document.getElementById('hostIp');
         const ipDisplay = document.getElementById('ip-display');
         const tfLink = document.getElementById('tf-link');
+        const listLink = document.getElementById('list-link');
+        const rqbitLink = document.getElementById('rqbit-link');
+        const psearchLink = document.getElementById('psearch-link');
         const curlInput = document.getElementById('curlInput');
         const curlStatus = document.getElementById('curlStatus');
         const ssidInput = document.getElementById('ssid');
@@ -165,8 +168,14 @@
             const cleanIp = ip.trim();
             if (cleanIp && cleanIp !== "0.0.0.0" && cleanIp !== "--.--.--.--") {
                 tfLink.href = `http://${cleanIp}:8311`;
+                psearchLink.href = `http://${cleanIp}:5010`;
+                rqbitLink.href = `http://${cleanIp}:3030`;
+                listLink.href = `http://${cleanIp}:8222`;
             } else {
-                tfLink.href = "#";
+                tfLink.href = "https://tf.dunc.app";
+                psearchLink.href = "https://rps.dunc.app";
+                rqbitLink.href = "https://rbit.dunc.app";
+                listLink.href = "https://list.dunc.app";
             }
         }
 
