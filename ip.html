@@ -80,7 +80,7 @@
             <a href="https://rbit.dunc.app" target="_blank" class="nav-btn">RQBIT</a>
             <a href="https://rbox.dunc.app" target="_blank" class="nav-btn">BOX</a>
             <a href="https://rps.dunc.app" target="_blank" class="nav-btn">PSEARCH</a>
-            <a href="https://tf.dunc.app" target="_blank" class="nav-btn">TF</a>
+            <a id="tf-link" href="#" target="_blank" class="nav-btn">TF</a>
         </div>
         <button class="settings-trigger" onclick="toggleModal()">SETTINGS</button>
     </div>
@@ -149,27 +149,39 @@
         const modal = document.getElementById('settingsModal');
         const hostIpInput = document.getElementById('hostIp');
         const ipDisplay = document.getElementById('ip-display');
+        const tfLink = document.getElementById('tf-link');
         const curlInput = document.getElementById('curlInput');
         const curlStatus = document.getElementById('curlStatus');
         const ssidInput = document.getElementById('ssid');
         const passInput = document.getElementById('pass');
 
-        // UUIDs MUST MATCH find.py
         const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
         const CHAR_IP_UUID = '12345678-1234-5678-1234-56789abcdef1';
         const CHAR_SSID_UUID = '12345678-1234-5678-1234-56789abcdef2';
         const CHAR_PASS_UUID = '12345678-1234-5678-1234-56789abcdef3';
 
+        // Helper to update the TF link URL
+        function updateTfLink(ip) {
+            const cleanIp = ip.trim();
+            if (cleanIp && cleanIp !== "0.0.0.0" && cleanIp !== "--.--.--.--") {
+                tfLink.href = `http://${cleanIp}:8311`;
+            } else {
+                tfLink.href = "#";
+            }
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             const savedIp = localStorage.getItem('tinyDjHostIp') || "10.8.0.12";
             hostIpInput.value = savedIp;
             ipDisplay.innerText = `IP: ${savedIp}`;
+            updateTfLink(savedIp);
         });
 
         hostIpInput.addEventListener('input', () => {
             const val = hostIpInput.value.trim();
             localStorage.setItem('tinyDjHostIp', val);
             ipDisplay.innerText = `IP: ${val}`;
+            updateTfLink(val);
         });
 
         function toggleModal() {
@@ -227,31 +239,28 @@
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(SERVICE_UUID);
 
-                // 1. Send SSID if provided
                 if (ssid) {
                     updateStatus("Syncing SSID...");
                     const ssidChar = await service.getCharacteristic(CHAR_SSID_UUID);
                     await ssidChar.writeValue(encoder.encode(ssid));
                 }
 
-                // 2. Send Pass if provided
                 if (pass) {
                     updateStatus("Syncing PASS...");
                     const passChar = await service.getCharacteristic(CHAR_PASS_UUID);
                     await passChar.writeValue(encoder.encode(pass));
                 }
 
-                // 3. Read back IP
                 updateStatus("Fetching IP...");
                 const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
                 const ipBuffer = await ipChar.readValue();
                 const remoteIp = new TextDecoder().decode(ipBuffer);
 
-                // 4. Update local state
                 if (remoteIp && remoteIp !== "0.0.0.0" && remoteIp !== "Not Connected") {
                     hostIpInput.value = remoteIp;
                     localStorage.setItem('tinyDjHostIp', remoteIp);
                     ipDisplay.innerText = `IP: ${remoteIp}`;
+                    updateTfLink(remoteIp);
                     updateStatus("SUCCESS", "var(--cyan)");
                 } else {
                     updateStatus("WIFI PENDING", "#ffaa00");
