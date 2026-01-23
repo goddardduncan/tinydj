@@ -131,6 +131,7 @@
         document.addEventListener('keydown', (e) => {
             if (document.activeElement.tagName === 'INPUT') return;
             if (e.key === 'ArrowLeft') hitEndpoint('ui/prev');
+            if (e.key === 'ArrowUp') hitEndpoint('epg');
             if (e.key === 'ArrowRight') hitEndpoint('ui/next');
             if (e.code === 'Space') { e.preventDefault(); hitEndpoint('pause'); }
         });
