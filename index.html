@@ -9,6 +9,8 @@
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; overflow: hidden; }
         
         .card { background: var(--card-bg); width: 100%; max-width: 380px; padding: 40px 24px; border-radius: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); text-align: center; border: 1px solid #333; z-index: 10; position: relative; }
+        
+        /* Restored Original ASCII alignment */
         .ascii-container { display: flex; justify-content: center; width: 100%; margin-bottom: 20px; }
         .ascii-header { margin: 0; font-family: monospace; font-size: 10px; line-height: 1.2; background: linear-gradient(to right, var(--accent), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; text-align: left; white-space: pre; }
         
@@ -27,8 +29,8 @@
         .top-bar { top: 0; justify-content: space-between; }
         .bottom-bar { bottom: 0; border-top: 1px solid #222; }
         
-        .nav-group { display: flex; gap: 8px; }
-        .nav-btn { background: #1a0026; border: 1px solid var(--accent); color: var(--accent); padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; text-decoration: none; text-transform: uppercase; font-family: monospace; }
+        .nav-group { display: flex; gap: 8px; overflow-x: auto; }
+        .nav-btn { background: #1a0026; border: 1px solid var(--accent); color: var(--accent); padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 700; text-decoration: none; text-transform: uppercase; font-family: monospace; white-space: nowrap; }
         
         .settings-trigger { background: none; border: 1px solid #444; color: #888; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 800; }
         
@@ -36,9 +38,8 @@
         .modal-open { display: flex; }
         .modal { background: #1a1a1a; width: 90%; max-width: 340px; padding: 30px; border-radius: 28px; border: 1px solid #333; }
         
-        .input-group { margin-bottom: 15px; }
         label { display: block; font-size: 10px; margin-bottom: 6px; color: var(--accent); font-weight: 800; text-transform: uppercase; }
-        input { width: 100%; padding: 12px; background: #000; border: 1px solid #333; border-radius: 12px; color: white; font-size: 14px; box-sizing: border-box; outline: none; }
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid #333; border-radius: 12px; color: white; font-size: 14px; box-sizing: border-box; outline: none; margin-bottom: 15px; }
         input:focus { border-color: var(--cyan); }
         
         #status { margin-top: 24px; font-size: 12px; font-family: monospace; color: #555; text-align: center; }
@@ -48,7 +49,9 @@
     <div class="top-bar">
         <div class="nav-group">
             <a id="list-link" href="#" target="_blank" class="nav-btn">LIST</a>
+            <a id="bit-link" href="#" target="_blank" class="nav-btn">BIT</a>
             <a id="box-link" href="#" target="_blank" class="nav-btn">BOX</a> 
+            <a id="ps-link" href="#" target="_blank" class="nav-btn">PSEARCH</a>
             <a id="tf-link" href="#" target="_blank" class="nav-btn">TF</a>
         </div>
         <button class="settings-trigger" onclick="toggleModal()">SETTINGS</button>
@@ -56,14 +59,14 @@
 
     <div class="card">
         <div class="ascii-container">
-            <pre class="ascii-header">
-  __  _                ____    _
- / /_(_)___  __  __   / __ \  (_)
-/ __/ / __ \/ / / /  / / / / / / 
-/ /_/ / / / / /_/ /  / /_/ / / /  
-\__/_/_/ /_/\__, /   /_____/_/ /   
+<pre class="ascii-header">
+   __  _                ____     _
+  / /_(_)___  __  __   / __ \   (_)
+ / __/ / __ \/ / / /  / / / /  / / 
+/ /_/ / / / / /_/ /  / /_/ /  / /  
+\__/_/_/ /_/\__, /  /_____/ _/ /   
            /____/         /___/    
-            </pre>
+</pre>
         </div>
         <div class="main-display">
             <h1>CONTROLS</h1>
@@ -74,7 +77,6 @@
             <button class="ctrl-btn" onclick="hitEndpoint('ui/prev')">PREV</button>
             <button class="ctrl-btn" onclick="hitEndpoint('ui/next')">NEXT</button>
         </div>
-
         <div class="nav-grid">
             <button class="ctrl-btn" onclick="hitEndpoint('pause')">PLAY/PAUSE</button>
             <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
@@ -85,16 +87,20 @@
 
     <div class="modal-overlay" id="settingsModal">
         <div class="modal">
-            <label>WiFi SSID</label><input type="text" id="ssid" class="input-group" placeholder="Network Name">
-            <label>WiFi Pass</label><input type="password" id="pass" class="input-group" placeholder="••••••••">
-            <button class="action-btn" id="syncBtn" onclick="oneClickSync()">CONNECT TO NETWORK</button>
+            <h3 style="margin-top:0; color:var(--cyan)">WIFI SETUP</h3>
+            <p style="font-size: 11px; color:#666; margin-bottom:20px;">Update credentials and retrieve IP</p>
             
-            <div style="height: 1px; background: #333; margin: 20px 0;"></div>
+            <label>SSID</label>
+            <input type="text" id="ssid" placeholder="Network Name">
             
-            <label>tinyDjHostIP</label>
+            <label>Passphrase</label>
+            <input type="password" id="pass" placeholder="••••••••">
+            
+            <label>Host IP (Remote Control)</label>
             <input type="text" id="hostIp" placeholder="192.168.x.x" onchange="manualIpChange(this.value)">
             
-            <button class="ctrl-btn" style="width: 100%; margin-top: 15px;" onclick="toggleModal()">CLOSE</button>
+            <button class="action-btn" id="syncBtn" onclick="oneClickSync()">Sync WiFi & Get IP</button>
+            <button class="ctrl-btn" style="width: 100%; margin-top: 15px; border-color:#555; color:#888" onclick="toggleModal()">CLOSE</button>
         </div>
     </div>
 
@@ -130,10 +136,12 @@
         }
 
         function updateLinks(ip) {
-            if (!ip || ip.includes('.')) {
+            if (ip && ip.includes('.')) {
                 document.getElementById('tf-link').href = `http://${ip}:8311`;
                 document.getElementById('box-link').href = `http://${ip}:8303`;
                 document.getElementById('list-link').href = `http://${ip}:8222`;
+                document.getElementById('bit-link').href = `http://${ip}:3030`;
+                document.getElementById('ps-link').href = `http://${ip}:5010`;
             }
         }
 
@@ -186,7 +194,7 @@
                             setTimeout(() => { 
                                 toggleModal(); 
                                 syncBtn.classList.remove('btn-success'); 
-                                syncBtn.innerText="CONNECT TO NETWORK"; 
+                                syncBtn.innerText="Sync WiFi & Get IP"; 
                                 updateStatus("Ready");
                             }, 2000);
                         } else {
