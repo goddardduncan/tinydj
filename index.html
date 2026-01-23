@@ -117,6 +117,7 @@
         const hostIpInput = document.getElementById('hostIp');
         const ipDisplay = document.getElementById('ip-display');
         const syncBtn = document.getElementById('syncBtn');
+        const castUrlInput = document.getElementById('castUrl');
         const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
         const CHAR_IP_UUID = '12345678-1234-5678-1234-56789abcdef1';
         const CHAR_SSID_UUID = '12345678-1234-5678-1234-56789abcdef2';
@@ -125,6 +126,21 @@
         let activeDevice = null;
         const spinnerFrames = ['-', '\\', '|', '/'];
         let spinIdx = 0;
+
+        // NEW: Keyboard Shortcuts (Global)
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            if (e.key === 'ArrowLeft') hitEndpoint('ui/prev');
+            if (e.key === 'ArrowRight') hitEndpoint('ui/next');
+            if (e.code === 'Space') { e.preventDefault(); hitEndpoint('pause'); }
+        });
+
+        // NEW: Enter Key for Cast Bar
+        castUrlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleCast();
+            }
+        });
 
         function updateStatus(msg, color = "#555") { 
             const s = document.getElementById('status');
@@ -211,7 +227,7 @@
         }
 
         function handleCast() {
-            const url = document.getElementById('castUrl').value;
+            const url = castUrlInput.value.trim();
             const ip = hostIpInput.value.trim();
             if(!url) return updateStatus("NO URL", "red");
             if(!ip || ip === "--.--.--.--") return updateStatus("SET IP FIRST", "red");
@@ -220,7 +236,8 @@
             fetch(`http://${ip}:7979/${encodeURIComponent(url)}`, { mode: 'no-cors' })
                 .then(() => {
                     updateStatus("CAST SENT", "#00ff00");
-                    document.getElementById('castUrl').value = ""; // Clear on success
+                    castUrlInput.value = ""; // Clear on success
+                    castUrlInput.blur(); // Remove focus
                     setTimeout(() => updateStatus("Ready"), 2000);
                 })
                 .catch(() => updateStatus("CAST FAILED", "red"));
