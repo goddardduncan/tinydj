@@ -10,7 +10,6 @@
         
         .card { background: var(--card-bg); width: 100%; max-width: 380px; padding: 40px 24px; border-radius: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); text-align: center; border: 1px solid #333; z-index: 10; position: relative; }
         
-        /* Fixed ASCII Header */
         .ascii-container { display: flex; justify-content: center; width: 100%; margin-bottom: 20px; }
         .ascii-header {
             margin: 0; font-family: monospace; font-size: 10px; line-height: 1.2;
@@ -35,11 +34,10 @@
 
         .action-btn { 
             background: linear-gradient(45deg, var(--accent), #7d82ff); color: white; border: none; 
-            padding: 16px; border-radius: 14px; font-size: 14px; font-weight: 600; cursor: pointer; 
-            width: 100%; margin-top: 10px; transition: all 0.2s; 
+            padding: 18px; border-radius: 16px; font-size: 15px; font-weight: 700; cursor: pointer; 
+            width: 100%; margin-top: 10px; transition: all 0.3s; 
         }
         .action-btn:active { transform: scale(0.98); }
-        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-success { background: #00ff00 !important; color: #000 !important; }
 
         .top-bar, .bottom-bar { position: fixed; left: 0; right: 0; background: #0a0a0a; padding: 10px 20px; display: flex; align-items: center; z-index: 100; border-bottom: 1px solid #222; }
@@ -70,8 +68,8 @@
         input { width: 100%; padding: 12px; background: #000; border: 1px solid #333; border-radius: 12px; color: white; font-size: 14px; box-sizing: border-box; outline: none; }
         input:focus { border-color: var(--cyan); }
 
-        #status { margin-top: 24px; font-size: 12px; font-family: monospace; color: #555; min-height: 1.2em; text-transform: uppercase; }
-        .loader { display: none; width: 18px; height: 18px; border: 2px solid #333; border-top: 2px solid var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 12px auto; }
+        #status { margin-top: 24px; font-size: 12px; font-family: monospace; color: #555; min-height: 1.2em; text-transform: uppercase; text-align: center; }
+        .loader { display: none; width: 22px; height: 22px; border: 3px solid #333; border-top: 3px solid var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 15px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
@@ -79,11 +77,11 @@
 
     <div class="top-bar">
         <div class="nav-group">
-            <a id="list-link" href="https://list.dunc.app" target="_blank" class="nav-btn">LIST</a>
-            <a id="rqbit-link" href="https://rbit.dunc.app" target="_blank" class="nav-btn">BIT</a>
-            <a id="box-link" href="https://rbox.dunc.app" target="_blank" class="nav-btn">BOX</a> 
-            <a id="psearch-link" href="https://rps.dunc.app" target="_blank" class="nav-btn">PSEARCH</a>
-            <a id="tf-link" href="https://tf.dunc.app" target="_blank" class="nav-btn">TF</a>
+            <a id="list-link" href="#" target="_blank" class="nav-btn">LIST</a>
+            <a id="rqbit-link" href="#" target="_blank" class="nav-btn">BIT</a>
+            <a id="box-link" href="#" target="_blank" class="nav-btn">BOX</a> 
+            <a id="psearch-link" href="#" target="_blank" class="nav-btn">PSEARCH</a>
+            <a id="tf-link" href="#" target="_blank" class="nav-btn">TF</a>
         </div>
         <button class="settings-trigger" onclick="toggleModal()">SETTINGS</button>
     </div>
@@ -91,12 +89,12 @@
     <div class="card">
         <div class="ascii-container">
             <pre class="ascii-header">
-  __  _                ____    _
- / /_(_)___  __  __   / __ \  (_)
-/ __/ / __ \/ / / /  / / / / / / 
+   __  _                ____    _
+  / /_(_)___  __  __   / __ \  (_)
+ / __/ / __ \/ / / /  / / / / / / 
 / /_/ / / / / /_/ /  / /_/ / / /  
-\__/_/_/ /_/\__, /   /_____/_/ /   
-           /____/         /___/    
+\__/_/_/ /_/\__, /  /_____/_/ /   
+           /____/        /___/    
             </pre>
         </div>
 
@@ -120,8 +118,7 @@
 
     <div class="modal-overlay" id="settingsModal">
         <div class="modal">
-            <h3 style="margin: 0 0 10px 0; color: var(--cyan); letter-spacing: 1px;">WIFI SETUP</h3>
-            <p style="color: #666; font-size: 11px; margin-bottom: 20px;">1. Sync Credentials → 2. Fetch Fresh IP</p>
+            <h3 style="margin: 0 0 10px 0; color: var(--cyan); letter-spacing: 1px; text-align:center;">WIFI SETUP</h3>
             
             <div class="input-group">
                 <label>SSID</label>
@@ -132,25 +129,15 @@
                 <input type="password" id="pass" placeholder="••••••••">
             </div>
 
-            <button class="action-btn" id="syncBtn" onclick="syncWiFi()">1. Sync WiFi Credentials</button>
-
-            <div style="height: 1px; background: #333; margin: 20px 0;"></div>
-
-            <div class="input-group">
-                <label>Host IP (Remote Control)</label>
-                <input type="text" id="hostIp" placeholder="PLEASE CONNECT" spellcheck="false">
-            </div>
-
-            <button class="action-btn" id="fetchBtn" style="background: linear-gradient(45deg, var(--cyan), #0088ff);" onclick="fetchIP()">2. Fetch Current IP</button>
+            <button class="action-btn" id="syncBtn" onclick="oneClickSync()">CONNECT TO NETWORK</button>
             
-            <button class="ctrl-btn" style="width: 100%; margin-top: 18px; border-color: #555; color: #888;" onclick="toggleModal()">CLOSE</button>
+            <button class="ctrl-btn" style="width: 100%; margin-top: 18px; border-color: #555; color: #888;" onclick="toggleModal()">CANCEL</button>
         </div>
     </div>
 
     <div class="bottom-bar">
-        <label style="font-size: 10px; color: var(--cyan); font-weight: 800; margin-right: 12px;">REMOTE</label>
-        <input type="text" id="curlInput" style="background:#000; border:1px solid #333; color:white; padding:8px 12px; border-radius:10px; flex-grow:1; font-family:monospace; font-size:12px;" placeholder="Paste URL...">
-        <div id="curlStatus" style="font-size: 10px; font-family: monospace; color: #555; margin-left: 10px;">Ready</div>
+        <label style="font-size: 10px; color: var(--cyan); font-weight: 800; margin-right: 12px;">URL</label>
+        <input type="text" id="hostIp" style="background:#000; border:1px solid #333; color:white; padding:8px 12px; border-radius:10px; flex-grow:1; font-family:monospace; font-size:12px;" placeholder="Host IP...">
     </div>
 
     <script>
@@ -172,7 +159,7 @@
 
         function updateTfLinks(ip) {
             const cleanIp = ip.trim();
-            if (cleanIp && !["0.0.0.0", "--.--.--.--", "Connecting...", "Not Connected"].includes(cleanIp)) {
+            if (cleanIp && !["0.0.0.0", "Connecting...", "Not Connected", "--.--.--.--"].includes(cleanIp)) {
                 document.getElementById('tf-link').href = `http://${cleanIp}:8311`;
                 document.getElementById('box-link').href = `http://${cleanIp}:8303`;
                 document.getElementById('psearch-link').href = `http://${cleanIp}:5010`;
@@ -185,84 +172,74 @@
             if (activeDevice && activeDevice.gatt.connected) {
                 return await activeDevice.gatt.getPrimaryService(SERVICE_UUID);
             }
-            updateStatus("Scanning for tinyDJ...");
+            updateStatus("Searching...");
             activeDevice = await navigator.bluetooth.requestDevice({
                 filters: [{ namePrefix: 'tinyDJ' }, { namePrefix: 'Alpine' }],
                 optionalServices: [SERVICE_UUID] 
             });
-            updateStatus("Connecting...");
             const server = await activeDevice.gatt.connect();
             return await server.getPrimaryService(SERVICE_UUID);
         }
 
-        async function syncWiFi() {
+        async function oneClickSync() {
             const ssid = ssidInput.value.trim();
             const pass = passInput.value.trim();
-            if (!ssid || !pass) return updateStatus("ENTER SSID/PASS", "#ff4444");
+            if (!ssid || !pass) return updateStatus("SSID/PASS REQ", "#ff4444");
 
             try {
                 toggleLoader(true);
                 const service = await getBleService();
                 const encoder = new TextEncoder();
 
-                updateStatus("Sending SSID...");
+                updateStatus("Sending credentials...");
                 await (await service.getCharacteristic(CHAR_SSID_UUID)).writeValue(encoder.encode(ssid));
-
-                updateStatus("Sending Password...");
                 await (await service.getCharacteristic(CHAR_PASS_UUID)).writeValue(encoder.encode(pass));
 
-                // Success Feedback
-                toggleLoader(false);
-                updateStatus("CREDENTIALS SYNCED", "#00ff00");
-                
-                const originalText = syncBtn.innerText;
-                syncBtn.innerText = "✓ SYNCED TO TINYDJ";
-                syncBtn.classList.add('btn-success');
+                // Start the 10 second countdown
+                let seconds = 12;
+                const countdown = setInterval(async () => {
+                    seconds--;
+                    updateStatus(`Connecting... ${seconds}s`, "var(--cyan)");
+                    
+                    if (seconds <= 0) {
+                        clearInterval(countdown);
+                        updateStatus("Fetching IP...");
+                        try {
+                            const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
+                            const buf = await ipChar.readValue();
+                            const remoteIp = new TextDecoder().decode(buf);
+                            
+                            if (remoteIp && !["0.0.0.0", "Connecting...", "Not Connected"].includes(remoteIp)) {
+                                hostIpInput.value = remoteIp;
+                                ipDisplay.innerText = `IP: ${remoteIp}`;
+                                localStorage.setItem('tinyDjHostIp', remoteIp);
+                                updateTfLinks(remoteIp);
+                                updateStatus("SUCCESS!", "#00ff00");
+                                toggleLoader(false);
+                                setTimeout(() => { toggleModal(); updateStatus("Ready"); }, 1500);
+                            } else {
+                                updateStatus("Still waiting...", "#ffaa00");
+                                toggleLoader(false);
+                            }
+                        } catch (e) {
+                            updateStatus("RECONNECTING...", "#ffaa00");
+                            toggleLoader(false);
+                        }
+                    }
+                }, 1000);
 
-                setTimeout(() => {
-                    syncBtn.innerText = originalText;
-                    syncBtn.classList.remove('btn-success');
-                    updateStatus("Wait 10s then Fetch IP", "#ffaa00");
-                }, 3500);
             } catch (err) {
-                updateStatus("SYNC ERR", "#ff4444");
-                toggleLoader(false);
-            }
-        }
-
-        async function fetchIP() {
-            try {
-                toggleLoader(true);
-                updateStatus("Reading IP...");
-                const service = await getBleService();
-                const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
-                
-                const buf = await ipChar.readValue();
-                const remoteIp = new TextDecoder().decode(buf);
-
-                if (remoteIp && !["0.0.0.0", "Connecting...", "Not Connected"].includes(remoteIp)) {
-                    hostIpInput.value = remoteIp;
-                    ipDisplay.innerText = `IP: ${remoteIp}`;
-                    localStorage.setItem('tinyDjHostIp', remoteIp);
-                    updateTfLinks(remoteIp);
-                    updateStatus("SUCCESS", "#00ff00");
-                    setTimeout(() => { toggleModal(); updateStatus("Ready"); }, 1200);
-                } else {
-                    updateStatus(remoteIp.toUpperCase() || "PENDING...", "#ffaa00");
-                }
-            } catch (err) {
-                updateStatus("FETCH ERR", "#ff4444");
-            } finally {
+                updateStatus("BLE ERROR", "#ff4444");
                 toggleLoader(false);
             }
         }
 
         async function hitEndpoint(path) {
             const currentIp = hostIpInput.value.trim() || "tinydj.local";
-            updateStatus(`${path}...`, "var(--cyan)");
+            updateStatus(`${path.toUpperCase()}...`, "var(--cyan)");
             fetch(`http://${currentIp}:7979/${path}`, { mode: 'no-cors' })
-                .then(() => { updateStatus("SENT", "#00ff00"); setTimeout(() => updateStatus("Ready"), 1500); })
-                .catch(() => updateStatus("UNREACHABLE", "#ff4444"));
+                .then(() => { updateStatus("SENT", "#00ff00"); setTimeout(() => updateStatus("Ready"), 1000); })
+                .catch(() => updateStatus("ERR: OFFLINE", "#ff4444"));
         }
 
         function toggleModal() { modal.classList.toggle('modal-open'); }
