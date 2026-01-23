@@ -240,7 +240,7 @@
 
     try {
         toggleLoader(true);
-        updateStatus("Connecting to tinyDJ...");
+        updateStatus("Connecting...");
         
         const device = await navigator.bluetooth.requestDevice({
             filters: [{ namePrefix: 'tinyDJ' }, { namePrefix: 'Alpine' }],
@@ -249,44 +249,55 @@
 
         const server = await device.gatt.connect();
         const service = await server.getPrimaryService(SERVICE_UUID);
-
-        // --- NEW: NOTIFICATION LISTENER ---
         const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
+
+        // --- Notification Listener ---
         await ipChar.startNotifications();
-        
         ipChar.addEventListener('characteristicvaluechanged', (event) => {
-            const remoteIp = new TextDecoder().decode(event.target.value);
+            handleIpUpdate(new TextDecoder().decode(event.target.value));
+        });
+
+        function handleIpUpdate(remoteIp) {
             if (remoteIp && remoteIp !== "0.0.0.0" && remoteIp !== "Not Connected") {
                 hostIpInput.value = remoteIp;
                 ipDisplay.innerText = `IP: ${remoteIp}`;
                 localStorage.setItem('tinyDjHostIp', remoteIp);
                 updateTfLink(remoteIp);
-                updateStatus("SUCCESS: IP UPDATED", "var(--cyan)");
-                // Close modal after a short delay once IP is pushed
+                updateStatus("SUCCESS", "var(--cyan)");
+                toggleLoader(false);
                 setTimeout(() => toggleModal(), 1500);
+                return true;
             }
-        });
-
-        // --- WRITE CREDENTIALS ---
-        if (ssid) {
-            updateStatus("Syncing SSID...");
-            const ssidChar = await service.getCharacteristic(CHAR_SSID_UUID);
-            await ssidChar.writeValue(encoder.encode(ssid));
+            return false;
         }
 
-        if (pass) {
-            updateStatus("Syncing PASS...");
-            const passChar = await service.getCharacteristic(CHAR_PASS_UUID);
-            await passChar.writeValue(encoder.encode(pass));
-        }
+        // --- Write Credentials ---
+        if (ssid) await (await service.getCharacteristic(CHAR_SSID_UUID)).writeValue(encoder.encode(ssid));
+        if (pass) await (await service.getCharacteristic(CHAR_PASS_UUID)).writeValue(encoder.encode(pass));
 
-        updateStatus("Waiting for fresh IP...", "var(--cyan)");
+        updateStatus("Switching WiFi...", "var(--cyan)");
 
-        // We keep the connection open so the Notification can come through.
-        // The listener above will handle the UI update once the IP arrives.
+        // --- THE FALLBACK POLL ---
+        // If after 12 seconds the notification hasn't updated the UI, try a manual read.
+        setTimeout(async () => {
+            if (hostIpInput.value === "PLEASE CONNECT TO WIFI" || hostIpInput.value === "") {
+                updateStatus("Polling for IP...");
+                try {
+                    const buf = await ipChar.readValue();
+                    const manualIp = new TextDecoder().decode(buf);
+                    if (!handleIpUpdate(manualIp)) {
+                        updateStatus("WIFI TIMEOUT", "#ffaa00");
+                        toggleLoader(false);
+                    }
+                } catch (e) {
+                    updateStatus("CONN LOST", "#ff4444");
+                    toggleLoader(false);
+                }
+            }
+        }, 12000);
 
     } catch (err) {
-        updateStatus("BT ERR: " + err.message.substring(0,25), "#ff4444");
+        updateStatus("BT ERR", "#ff4444");
         toggleLoader(false);
     }
 }
