@@ -19,7 +19,6 @@
         
         .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
         
-        /* Fixed Hover States */
         .ctrl-btn { background: #252525; border: 1px solid #444; color: var(--cyan); padding: 20px 5px; border-radius: 18px; font-family: monospace; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
         .ctrl-btn:hover { background: var(--cyan); color: #000; border-color: var(--cyan); }
         
@@ -28,7 +27,7 @@
         
         .top-bar, .bottom-bar { position: fixed; left: 0; right: 0; background: #0a0a0a; padding: 10px 20px; display: flex; align-items: center; z-index: 100; border-bottom: 1px solid #222; }
         .top-bar { top: 0; justify-content: space-between; }
-        .bottom-bar { bottom: 0; border-top: 1px solid #222; }
+        .bottom-bar { bottom: 0; border-top: 1px solid #222; gap: 10px; }
         
         .nav-group { display: flex; gap: 8px; overflow-x: auto; }
         .nav-btn { background: #1a0026; border: 1px solid var(--accent); color: var(--accent); padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 700; text-decoration: none; text-transform: uppercase; font-family: monospace; white-space: nowrap; transition: 0.2s; }
@@ -46,6 +45,9 @@
         input:focus { border-color: var(--cyan); }
         
         #status { margin-top: 24px; font-size: 12px; font-family: monospace; color: #555; text-align: center; }
+
+        .cast-input { background:#000; border:1px solid #333; color:white; padding:10px; border-radius:10px; flex-grow:1; font-family:monospace; margin-bottom: 0 !important; }
+        .cast-send { background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -106,8 +108,9 @@
     </div>
 
     <div class="bottom-bar">
-        <label style="font-size: 10px; color: var(--cyan); margin-right: 12px; font-weight: 800;">CAST</label>
-        <input type="text" id="castUrl" style="background:#000; border:1px solid #333; color:white; padding:10px; border-radius:10px; flex-grow:1; font-family:monospace;" placeholder="Paste URL here..." onpaste="handlePaste(event)">
+        <label style="font-size: 10px; color: var(--cyan); font-weight: 800;">CAST</label>
+        <input type="text" id="castUrl" class="cast-input" placeholder="URL...">
+        <button class="cast-send" onclick="handleCast()">SEND</button>
     </div>
 
     <script>
@@ -207,13 +210,19 @@
             } catch (e) { updateStatus("FETCH ERR", "red"); }
         }
 
-        function handlePaste(e) {
-            const url = (e.clipboardData || window.clipboardData).getData('text');
+        function handleCast() {
+            const url = document.getElementById('castUrl').value;
             const ip = hostIpInput.value.trim();
+            if(!url) return updateStatus("NO URL", "red");
             if(!ip || ip === "--.--.--.--") return updateStatus("SET IP FIRST", "red");
+            
             updateStatus("CASTING...", "var(--cyan)");
             fetch(`http://${ip}:7979/cast?url=${encodeURIComponent(url)}`, { mode: 'no-cors' })
-                .then(() => updateStatus("CAST SENT", "#00ff00"))
+                .then(() => {
+                    updateStatus("CAST SENT", "#00ff00");
+                    document.getElementById('castUrl').value = ""; // Clear on success
+                    setTimeout(() => updateStatus("Ready"), 2000);
+                })
                 .catch(() => updateStatus("CAST FAILED", "red"));
         }
 
