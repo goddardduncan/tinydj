@@ -100,7 +100,7 @@
             <input type="password" id="pass" placeholder="••••••••">
             
             <label>Host IP (Remote Control)</label>
-            <input type="text" id="hostIp" placeholder="192.168.x.x" onchange="manualIpChange(this.value)">
+            <input type="text" id="hostIp" placeholder="tinydj.local" onchange="manualIpChange(this.value)">
             
             <button class="action-btn" id="syncBtn" onclick="oneClickSync()">Sync WiFi & Get IP</button>
             <button class="ctrl-btn" style="width: 100%; margin-top: 15px; border-color:#555; color:#888" onclick="toggleModal()">CLOSE</button>
@@ -253,7 +253,7 @@
         }
 
         window.onload = () => {
-            const saved = localStorage.getItem('tinyDjHostIp') || "192.168.1.1";
+            const saved = localStorage.getItem('tinyDjHostIp') || "tinydj.local";
             hostIpInput.value = saved;
             ipDisplay.innerText = `IP: ${saved}`;
             updateLinks(saved);
