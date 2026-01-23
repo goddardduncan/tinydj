@@ -6,71 +6,42 @@
     <title>tinyDJ Remote</title>
     <style>
         :root { --accent: #bf00ff; --cyan: #00ffff; --bg: #0f0f0f; --card-bg: #1a1a1a; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; overflow: hidden; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; overflow: hidden; }
         
         .card { background: var(--card-bg); width: 100%; max-width: 380px; padding: 40px 24px; border-radius: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); text-align: center; border: 1px solid #333; z-index: 10; position: relative; }
-        
         .ascii-container { display: flex; justify-content: center; width: 100%; margin-bottom: 20px; }
-        .ascii-header {
-            margin: 0; font-family: monospace; font-size: 10px; line-height: 1.2;
-            background: linear-gradient(to right, var(--accent), var(--cyan));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            font-weight: bold; text-align: left; display: block; white-space: pre;
-        }
+        .ascii-header { margin: 0; font-family: monospace; font-size: 10px; line-height: 1.2; background: linear-gradient(to right, var(--accent), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; text-align: left; white-space: pre; }
 
         .main-display { margin-bottom: 25px; }
         .main-display h1 { font-size: 24px; margin: 0; font-weight: 500; }
-        .main-display p { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px; font-family: monospace; }
+        .ip-text { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px; font-family: monospace; }
 
         .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-        
-        .ctrl-btn { 
-            background: #252525; border: 1px solid #444; color: var(--cyan); 
-            padding: 20px 5px; border-radius: 18px; font-family: monospace; font-weight: bold; 
-            cursor: pointer; transition: all 0.2s; font-size: 13px;
-        }
-        .ctrl-btn:hover { border-color: var(--cyan); background: #2a2a2a; }
-        .ctrl-btn:active { background: var(--cyan); color: #000; transform: translateY(2px); }
+        .ctrl-btn { background: #252525; border: 1px solid #444; color: var(--cyan); padding: 20px 5px; border-radius: 18px; font-family: monospace; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
+        .ctrl-btn:hover { border-color: var(--cyan); }
 
-        .action-btn { 
-            background: linear-gradient(45deg, var(--accent), #7d82ff); color: white; border: none; 
-            padding: 18px; border-radius: 16px; font-size: 15px; font-weight: 700; cursor: pointer; 
-            width: 100%; margin-top: 10px; transition: all 0.3s; 
-        }
-        .action-btn:active { transform: scale(0.98); }
+        .action-btn { background: linear-gradient(45deg, var(--accent), #7d82ff); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 10px; transition: all 0.3s; font-family: monospace; }
         .btn-success { background: #00ff00 !important; color: #000 !important; }
 
         .top-bar, .bottom-bar { position: fixed; left: 0; right: 0; background: #0a0a0a; padding: 10px 20px; display: flex; align-items: center; z-index: 100; border-bottom: 1px solid #222; }
         .top-bar { top: 0; justify-content: space-between; }
-        .bottom-bar { bottom: 0; top: auto; border-bottom: none; border-top: 1px solid #222; }
+        .bottom-bar { bottom: 0; border-top: 1px solid #222; }
 
         .nav-group { display: flex; gap: 8px; }
-        .nav-btn {
-            background: #1a0026; border: 1px solid var(--accent); color: var(--accent);
-            padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700;
-            text-decoration: none; text-transform: uppercase; font-family: monospace; transition: 0.2s;
-        }
-        .nav-btn:hover { background: var(--accent); color: white; }
+        .nav-btn { background: #1a0026; border: 1px solid var(--accent); color: var(--accent); padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; text-decoration: none; text-transform: uppercase; font-family: monospace; }
 
         .settings-trigger { background: none; border: 1px solid #444; color: #888; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 800; }
-        .settings-trigger:hover { color: var(--cyan); border-color: var(--cyan); }
 
-        .modal-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
-            display: none; justify-content: center; align-items: center; z-index: 1000; 
-        }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-open { display: flex; }
-        .modal { background: #1a1a1a; width: 90%; max-width: 340px; padding: 30px; border-radius: 28px; border: 1px solid #333; text-align: left; }
+        .modal { background: #1a1a1a; width: 90%; max-width: 340px; padding: 30px; border-radius: 28px; border: 1px solid #333; }
         
         .input-group { margin-bottom: 15px; }
         label { display: block; font-size: 10px; margin-bottom: 6px; color: var(--accent); font-weight: 800; text-transform: uppercase; }
         input { width: 100%; padding: 12px; background: #000; border: 1px solid #333; border-radius: 12px; color: white; font-size: 14px; box-sizing: border-box; outline: none; }
         input:focus { border-color: var(--cyan); }
 
-        #status { margin-top: 24px; font-size: 12px; font-family: monospace; color: #555; min-height: 1.2em; text-transform: uppercase; text-align: center; }
-        .loader { display: none; width: 22px; height: 22px; border: 3px solid #333; border-top: 3px solid var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 15px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #status { margin-top: 24px; font-size: 12px; font-family: monospace; color: #555; text-align: center; }
     </style>
 </head>
 <body>
@@ -78,9 +49,7 @@
     <div class="top-bar">
         <div class="nav-group">
             <a id="list-link" href="#" target="_blank" class="nav-btn">LIST</a>
-            <a id="rqbit-link" href="#" target="_blank" class="nav-btn">BIT</a>
             <a id="box-link" href="#" target="_blank" class="nav-btn">BOX</a> 
-            <a id="psearch-link" href="#" target="_blank" class="nav-btn">PSEARCH</a>
             <a id="tf-link" href="#" target="_blank" class="nav-btn">TF</a>
         </div>
         <button class="settings-trigger" onclick="toggleModal()">SETTINGS</button>
@@ -89,169 +58,148 @@
     <div class="card">
         <div class="ascii-container">
             <pre class="ascii-header">
-   __  _                ____    _
-  / /_(_)___  __  __   / __ \  (_)
- / __/ / __ \/ / / /  / / / / / / 
+  __  _                ____    _
+ / /_(_)___  __  __   / __ \  (_)
+/ __/ / __ \/ / / /  / / / / / / 
 / /_/ / / / / /_/ /  / /_/ / / /  
-\__/_/_/ /_/\__, /  /_____/_/ /   
-           /____/        /___/    
+\__/_/_/ /_/\__, /   /_____/_/ /   
+           /____/         /___/    
             </pre>
         </div>
-
         <div class="main-display">
             <h1>CONTROLS</h1>
-            <p id="ip-display">IP: --.--.--.--</p>
+            <p id="ip-display" class="ip-text">IP: --.--.--.--</p>
         </div>
-
         <div class="nav-grid">
             <button class="ctrl-btn" onclick="hitEndpoint('ui/prev')">PREV</button>
             <button class="ctrl-btn" onclick="hitEndpoint('ui/next')">NEXT</button>
         </div>
-        <div class="nav-grid">
-            <button class="ctrl-btn" onclick="hitEndpoint('pause')">PAUSE</button>
-            <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
-        </div>
-
-        <div class="loader" id="loader"></div>
         <div id="status">Ready</div>
     </div>
 
     <div class="modal-overlay" id="settingsModal">
         <div class="modal">
-            <h3 style="margin: 0 0 10px 0; color: var(--cyan); letter-spacing: 1px; text-align:center;">WIFI SETUP</h3>
-            
-            <div class="input-group">
-                <label>SSID</label>
-                <input type="text" id="ssid" placeholder="Network Name" spellcheck="false">
-            </div>
-            <div class="input-group">
-                <label>Passphrase</label>
-                <input type="password" id="pass" placeholder="••••••••">
-            </div>
-
+            <label>WiFi SSID</label><input type="text" id="ssid" class="input-group" placeholder="Network Name">
+            <label>WiFi Pass</label><input type="password" id="pass" class="input-group" placeholder="••••••••">
             <button class="action-btn" id="syncBtn" onclick="oneClickSync()">CONNECT TO NETWORK</button>
-            
-            <button class="ctrl-btn" style="width: 100%; margin-top: 18px; border-color: #555; color: #888;" onclick="toggleModal()">CANCEL</button>
+            <div style="height: 1px; background: #333; margin: 20px 0;"></div>
+            <label>tinyDjHostIP</label>
+            <input type="text" id="hostIp" placeholder="192.168.x.x" onchange="manualIpChange(this.value)">
+            <button class="ctrl-btn" style="width: 100%; margin-top: 15px;" onclick="toggleModal()">CLOSE</button>
         </div>
     </div>
 
     <div class="bottom-bar">
-        <label style="font-size: 10px; color: var(--cyan); font-weight: 800; margin-right: 12px;">URL</label>
-        <input type="text" id="hostIp" style="background:#000; border:1px solid #333; color:white; padding:8px 12px; border-radius:10px; flex-grow:1; font-family:monospace; font-size:12px;" placeholder="Host IP...">
+        <label style="font-size: 10px; color: var(--cyan); margin-right: 12px; font-weight: 800;">CAST</label>
+        <input type="text" id="castUrl" style="background:#000; border:1px solid #333; color:white; padding:10px; border-radius:10px; flex-grow:1; font-family:monospace;" placeholder="Paste URL here..." onpaste="handlePaste(event)">
     </div>
 
     <script>
-        const modal = document.getElementById('settingsModal');
         const hostIpInput = document.getElementById('hostIp');
         const ipDisplay = document.getElementById('ip-display');
-        const ssidInput = document.getElementById('ssid');
-        const passInput = document.getElementById('pass');
-        const statusDiv = document.getElementById('status');
-        const loader = document.getElementById('loader');
         const syncBtn = document.getElementById('syncBtn');
-
         const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
         const CHAR_IP_UUID = '12345678-1234-5678-1234-56789abcdef1';
         const CHAR_SSID_UUID = '12345678-1234-5678-1234-56789abcdef2';
         const CHAR_PASS_UUID = '12345678-1234-5678-1234-56789abcdef3';
 
         let activeDevice = null;
+        const spinnerFrames = ['-', '\\', '|', '/'];
+        let spinIdx = 0;
 
-        function updateTfLinks(ip) {
-            const cleanIp = ip.trim();
-            if (cleanIp && !["0.0.0.0", "Connecting...", "Not Connected", "--.--.--.--"].includes(cleanIp)) {
-                document.getElementById('tf-link').href = `http://${cleanIp}:8311`;
-                document.getElementById('box-link').href = `http://${cleanIp}:8303`;
-                document.getElementById('psearch-link').href = `http://${cleanIp}:5010`;
-                document.getElementById('rqbit-link').href = `http://${cleanIp}:3030`;
-                document.getElementById('list-link').href = `http://${cleanIp}:8222`;
+        function updateStatus(msg, color = "#555") { 
+            const s = document.getElementById('status');
+            s.innerText = msg; s.style.color = color; 
+        }
+
+        function toggleModal() { document.getElementById('settingsModal').classList.toggle('modal-open'); }
+
+        function manualIpChange(val) {
+            localStorage.setItem('tinyDjHostIp', val);
+            ipDisplay.innerText = `IP: ${val}`;
+            updateLinks(val);
+        }
+
+        function updateLinks(ip) {
+            if (!ip || ip.includes('.')) {
+                document.getElementById('tf-link').href = `http://${ip}:8311`;
+                document.getElementById('box-link').href = `http://${ip}:8303`;
+                document.getElementById('list-link').href = `http://${ip}:8222`;
             }
         }
 
         async function getBleService() {
-            if (activeDevice && activeDevice.gatt.connected) {
-                return await activeDevice.gatt.getPrimaryService(SERVICE_UUID);
-            }
-            updateStatus("Searching...");
-            activeDevice = await navigator.bluetooth.requestDevice({
-                filters: [{ namePrefix: 'tinyDJ' }, { namePrefix: 'Alpine' }],
-                optionalServices: [SERVICE_UUID] 
-            });
+            if (activeDevice && activeDevice.gatt.connected) return await activeDevice.gatt.getPrimaryService(SERVICE_UUID);
+            activeDevice = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'tinyDJ' }], optionalServices: [SERVICE_UUID] });
             const server = await activeDevice.gatt.connect();
             return await server.getPrimaryService(SERVICE_UUID);
         }
 
         async function oneClickSync() {
-            const ssid = ssidInput.value.trim();
-            const pass = passInput.value.trim();
-            if (!ssid || !pass) return updateStatus("SSID/PASS REQ", "#ff4444");
-
+            const ssid = document.getElementById('ssid').value;
+            const pass = document.getElementById('pass').value;
             try {
-                toggleLoader(true);
                 const service = await getBleService();
-                const encoder = new TextEncoder();
-
-                updateStatus("Sending credentials...");
-                await (await service.getCharacteristic(CHAR_SSID_UUID)).writeValue(encoder.encode(ssid));
-                await (await service.getCharacteristic(CHAR_PASS_UUID)).writeValue(encoder.encode(pass));
-
-                // Start the 10 second countdown
-                let seconds = 12;
-                const countdown = setInterval(async () => {
-                    seconds--;
-                    updateStatus(`Connecting... ${seconds}s`, "var(--cyan)");
-                    
-                    if (seconds <= 0) {
-                        clearInterval(countdown);
-                        updateStatus("Fetching IP...");
-                        try {
-                            const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
-                            const buf = await ipChar.readValue();
-                            const remoteIp = new TextDecoder().decode(buf);
-                            
-                            if (remoteIp && !["0.0.0.0", "Connecting...", "Not Connected"].includes(remoteIp)) {
-                                hostIpInput.value = remoteIp;
-                                ipDisplay.innerText = `IP: ${remoteIp}`;
-                                localStorage.setItem('tinyDjHostIp', remoteIp);
-                                updateTfLinks(remoteIp);
-                                updateStatus("SUCCESS!", "#00ff00");
-                                toggleLoader(false);
-                                setTimeout(() => { toggleModal(); updateStatus("Ready"); }, 1500);
-                            } else {
-                                updateStatus("Still waiting...", "#ffaa00");
-                                toggleLoader(false);
-                            }
-                        } catch (e) {
-                            updateStatus("RECONNECTING...", "#ffaa00");
-                            toggleLoader(false);
-                        }
+                updateStatus("Syncing...");
+                const enc = new TextEncoder();
+                await (await service.getCharacteristic(CHAR_SSID_UUID)).writeValue(enc.encode(ssid));
+                await (await service.getCharacteristic(CHAR_PASS_UUID)).writeValue(enc.encode(pass));
+                
+                let count = 12;
+                const interval = setInterval(() => {
+                    syncBtn.innerText = `${spinnerFrames[spinIdx]} CONNECTING ${count}s`;
+                    spinIdx = (spinIdx + 1) % 4;
+                    if (count <= 0) {
+                        clearInterval(interval);
+                        keepTryingFetch(service);
                     }
+                    count--;
                 }, 1000);
-
-            } catch (err) {
-                updateStatus("BLE ERROR", "#ff4444");
-                toggleLoader(false);
-            }
+            } catch (e) { updateStatus("BLE ERROR", "red"); }
         }
 
-        async function hitEndpoint(path) {
-            const currentIp = hostIpInput.value.trim() || "tinydj.local";
-            updateStatus(`${path.toUpperCase()}...`, "var(--cyan)");
-            fetch(`http://${currentIp}:7979/${path}`, { mode: 'no-cors' })
-                .then(() => { updateStatus("SENT", "#00ff00"); setTimeout(() => updateStatus("Ready"), 1000); })
-                .catch(() => updateStatus("ERR: OFFLINE", "#ff4444"));
+        async function keepTryingFetch(service) {
+            syncBtn.innerText = "WAITING FOR IP...";
+            const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
+            const check = async () => {
+                const buf = await ipChar.readValue();
+                const ip = new TextDecoder().decode(buf);
+                if (ip.includes('.') && !ip.includes('Connecting')) {
+                    manualIpChange(ip);
+                    hostIpInput.value = ip;
+                    syncBtn.innerText = "✓ CONNECTED";
+                    syncBtn.classList.add('btn-success');
+                    updateStatus("SUCCESS", "var(--cyan)");
+                    setTimeout(() => { toggleModal(); syncBtn.classList.remove('btn-success'); syncBtn.innerText="CONNECT TO NETWORK"; }, 2000);
+                } else {
+                    setTimeout(check, 2000);
+                }
+            };
+            check();
         }
 
-        function toggleModal() { modal.classList.toggle('modal-open'); }
-        function updateStatus(msg, color = "#555") { statusDiv.innerText = msg; statusDiv.style.color = color; }
-        function toggleLoader(show) { loader.style.display = show ? "block" : "none"; }
+        function handlePaste(e) {
+            const url = (e.clipboardData || window.clipboardData).getData('text');
+            const ip = hostIpInput.value;
+            updateStatus("CASTING...", "var(--cyan)");
+            fetch(`http://${ip}:7979/cast?url=${encodeURIComponent(url)}`, { mode: 'no-cors' })
+                .then(() => updateStatus("CAST SENT", "#00ff00"))
+                .catch(() => updateStatus("CAST FAILED", "red"));
+        }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedIp = localStorage.getItem('tinyDjHostIp') || "tinydj.local";
-            hostIpInput.value = savedIp;
-            ipDisplay.innerText = `IP: ${savedIp}`;
-            updateTfLinks(savedIp);
-        });
+        function hitEndpoint(p) {
+            const ip = hostIpInput.value;
+            fetch(`http://${ip}:7979/${p}`, { mode: 'no-cors' })
+                .then(() => updateStatus("SENT", "#00ff00"))
+                .catch(() => updateStatus("OFFLINE", "red"));
+        }
+
+        window.onload = () => {
+            const saved = localStorage.getItem('tinyDjHostIp') || "192.168.1.1";
+            hostIpInput.value = saved;
+            ipDisplay.innerText = `IP: ${saved}`;
+            updateLinks(saved);
+        };
     </script>
 </body>
 </html>
