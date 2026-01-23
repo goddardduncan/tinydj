@@ -65,12 +65,12 @@
     <div class="card">
         <div class="ascii-container">
 <pre class="ascii-header">
-   __  _                ____     _
-  / /_(_)___  __  __   / __ \   (_)
- / __/ / __ \/ / / /  / / / /  / / 
-/ /_/ / / / / /_/ /  / /_/ /  / /  
-\__/_/_/ /_/\__, /  /_____/  /_/   
-           /____/         /___/    
+   __  _                ____    _
+  / /_(_)___  __  __   / __ \  (_'
+ / __/ / __ \/ / / /  / / / / / / 
+/ /_/ / / / / /_/ /  / /_/ / / /  
+\__/_/_/ /_/\__, /  /_____/_/ /   
+           /____/        /___/    
 </pre>
         </div>
         <div class="main-display">
@@ -85,7 +85,7 @@
             <button class="ctrl-btn" onclick="hitEndpoint('pause')">PLAY/PAUSE</button>
             <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
         </div>
-        <div id="status">Ready</div>
+        <div id="status">READY</div>
     </div>
 
     <div class="modal-overlay" id="settingsModal">
@@ -108,9 +108,9 @@
     </div>
 
     <div class="bottom-bar">
-        <label style="font-size: 10px; color: var(--cyan); font-weight: 800;">CAST</label>
-        <input type="text" id="castUrl" class="cast-input" placeholder="URL...">
-        <button class="cast-send" onclick="handleCast()">SEND</button>
+        <label style="font-size: 10px; color: var(--cyan); font-weight: 800;">REMOTE</label>
+        <input type="text" id="castUrl" class="cast-input" placeholder="Paste URL and press Enter...">
+        <button class="cast-send" onclick="handleCast()">CAST</button>
     </div>
 
     <script>
@@ -217,7 +217,7 @@
             if(!ip || ip === "--.--.--.--") return updateStatus("SET IP FIRST", "red");
             
             updateStatus("CASTING...", "var(--cyan)");
-            fetch(`http://${ip}:7979/cast?url=${encodeURIComponent(url)}`, { mode: 'no-cors' })
+            fetch(`http://${ip}:7979/${encodeURIComponent(url)}`, { mode: 'no-cors' })
                 .then(() => {
                     updateStatus("CAST SENT", "#00ff00");
                     document.getElementById('castUrl').value = ""; // Clear on success
