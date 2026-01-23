@@ -10,7 +10,6 @@
         
         .card { background: var(--card-bg); width: 100%; max-width: 380px; padding: 40px 24px; border-radius: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); text-align: center; border: 1px solid #333; z-index: 10; position: relative; }
         
-        /* Restored Original ASCII alignment */
         .ascii-container { display: flex; justify-content: center; width: 100%; margin-bottom: 20px; }
         .ascii-header { margin: 0; font-family: monospace; font-size: 10px; line-height: 1.2; background: linear-gradient(to right, var(--accent), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; text-align: left; white-space: pre; }
         
@@ -19,8 +18,10 @@
         .ip-text { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px; font-family: monospace; }
         
         .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        
+        /* Fixed Hover States */
         .ctrl-btn { background: #252525; border: 1px solid #444; color: var(--cyan); padding: 20px 5px; border-radius: 18px; font-family: monospace; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
-        .ctrl-btn:hover { border-color: var(--cyan); }
+        .ctrl-btn:hover { background: var(--cyan); color: #000; border-color: var(--cyan); }
         
         .action-btn { background: linear-gradient(45deg, var(--accent), #7d82ff); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 10px; transition: all 0.3s; font-family: monospace; }
         .btn-success { background: #00ff00 !important; color: #000 !important; }
@@ -30,10 +31,12 @@
         .bottom-bar { bottom: 0; border-top: 1px solid #222; }
         
         .nav-group { display: flex; gap: 8px; overflow-x: auto; }
-        .nav-btn { background: #1a0026; border: 1px solid var(--accent); color: var(--accent); padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 700; text-decoration: none; text-transform: uppercase; font-family: monospace; white-space: nowrap; }
-        
-        .settings-trigger { background: none; border: 1px solid #444; color: #888; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 800; }
-        
+        .nav-btn { background: #1a0026; border: 1px solid var(--accent); color: var(--accent); padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 700; text-decoration: none; text-transform: uppercase; font-family: monospace; white-space: nowrap; transition: 0.2s; }
+        .nav-btn:hover { background: var(--accent); color: #fff; }
+
+        .settings-trigger { background: none; border: 1px solid #444; color: #888; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 800; transition: 0.2s; }
+        .settings-trigger:hover { border-color: var(--cyan); color: var(--cyan); }
+
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-open { display: flex; }
         .modal { background: #1a1a1a; width: 90%; max-width: 340px; padding: 30px; border-radius: 28px; border: 1px solid #333; }
@@ -64,7 +67,7 @@
   / /_(_)___  __  __   / __ \   (_)
  / __/ / __ \/ / / /  / / / /  / / 
 / /_/ / / / / /_/ /  / /_/ /  / /  
-\__/_/_/ /_/\__, /  /_____/ _/ /   
+\__/_/_/ /_/\__, /  /_____/  /_/   
            /____/         /___/    
 </pre>
         </div>
@@ -72,7 +75,6 @@
             <h1>CONTROLS</h1>
             <p id="ip-display" class="ip-text">IP: --.--.--.--</p>
         </div>
-
         <div class="nav-grid">
             <button class="ctrl-btn" onclick="hitEndpoint('ui/prev')">PREV</button>
             <button class="ctrl-btn" onclick="hitEndpoint('ui/next')">NEXT</button>
@@ -81,7 +83,6 @@
             <button class="ctrl-btn" onclick="hitEndpoint('pause')">PLAY/PAUSE</button>
             <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
         </div>
-
         <div id="status">Ready</div>
     </div>
 
@@ -208,7 +209,8 @@
 
         function handlePaste(e) {
             const url = (e.clipboardData || window.clipboardData).getData('text');
-            const ip = hostIpInput.value;
+            const ip = hostIpInput.value.trim();
+            if(!ip || ip === "--.--.--.--") return updateStatus("SET IP FIRST", "red");
             updateStatus("CASTING...", "var(--cyan)");
             fetch(`http://${ip}:7979/cast?url=${encodeURIComponent(url)}`, { mode: 'no-cors' })
                 .then(() => updateStatus("CAST SENT", "#00ff00"))
@@ -216,7 +218,7 @@
         }
 
         function hitEndpoint(p) {
-            const ip = hostIpInput.value;
+            const ip = hostIpInput.value.trim();
             updateStatus(`${p.toUpperCase()}...`, "var(--cyan)");
             fetch(`http://${ip}:7979/${p}`, { mode: 'no-cors' })
                 .then(() => { updateStatus("SENT", "#00ff00"); setTimeout(() => updateStatus("Ready"), 1500); })
