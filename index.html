@@ -11,27 +11,27 @@
         .card { background: var(--card-bg); width: 100%; max-width: 380px; padding: 40px 24px; border-radius: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); text-align: center; border: 1px solid #333; z-index: 10; position: relative; }
         .ascii-container { display: flex; justify-content: center; width: 100%; margin-bottom: 20px; }
         .ascii-header { margin: 0; font-family: monospace; font-size: 10px; line-height: 1.2; background: linear-gradient(to right, var(--accent), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; text-align: left; white-space: pre; }
-
+        
         .main-display { margin-bottom: 25px; }
         .main-display h1 { font-size: 24px; margin: 0; font-weight: 500; }
         .ip-text { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px; font-family: monospace; }
-
+        
         .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
         .ctrl-btn { background: #252525; border: 1px solid #444; color: var(--cyan); padding: 20px 5px; border-radius: 18px; font-family: monospace; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
         .ctrl-btn:hover { border-color: var(--cyan); }
-
+        
         .action-btn { background: linear-gradient(45deg, var(--accent), #7d82ff); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 10px; transition: all 0.3s; font-family: monospace; }
         .btn-success { background: #00ff00 !important; color: #000 !important; }
-
+        
         .top-bar, .bottom-bar { position: fixed; left: 0; right: 0; background: #0a0a0a; padding: 10px 20px; display: flex; align-items: center; z-index: 100; border-bottom: 1px solid #222; }
         .top-bar { top: 0; justify-content: space-between; }
         .bottom-bar { bottom: 0; border-top: 1px solid #222; }
-
+        
         .nav-group { display: flex; gap: 8px; }
         .nav-btn { background: #1a0026; border: 1px solid var(--accent); color: var(--accent); padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; text-decoration: none; text-transform: uppercase; font-family: monospace; }
-
+        
         .settings-trigger { background: none; border: 1px solid #444; color: #888; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 800; }
-
+        
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-open { display: flex; }
         .modal { background: #1a1a1a; width: 90%; max-width: 340px; padding: 30px; border-radius: 28px; border: 1px solid #333; }
@@ -40,12 +40,11 @@
         label { display: block; font-size: 10px; margin-bottom: 6px; color: var(--accent); font-weight: 800; text-transform: uppercase; }
         input { width: 100%; padding: 12px; background: #000; border: 1px solid #333; border-radius: 12px; color: white; font-size: 14px; box-sizing: border-box; outline: none; }
         input:focus { border-color: var(--cyan); }
-
+        
         #status { margin-top: 24px; font-size: 12px; font-family: monospace; color: #555; text-align: center; }
     </style>
 </head>
 <body>
-
     <div class="top-bar">
         <div class="nav-group">
             <a id="list-link" href="#" target="_blank" class="nav-btn">LIST</a>
@@ -70,10 +69,17 @@
             <h1>CONTROLS</h1>
             <p id="ip-display" class="ip-text">IP: --.--.--.--</p>
         </div>
+
         <div class="nav-grid">
             <button class="ctrl-btn" onclick="hitEndpoint('ui/prev')">PREV</button>
             <button class="ctrl-btn" onclick="hitEndpoint('ui/next')">NEXT</button>
         </div>
+
+        <div class="nav-grid">
+            <button class="ctrl-btn" onclick="hitEndpoint('pause')">PLAY/PAUSE</button>
+            <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
+        </div>
+
         <div id="status">Ready</div>
     </div>
 
@@ -82,9 +88,12 @@
             <label>WiFi SSID</label><input type="text" id="ssid" class="input-group" placeholder="Network Name">
             <label>WiFi Pass</label><input type="password" id="pass" class="input-group" placeholder="••••••••">
             <button class="action-btn" id="syncBtn" onclick="oneClickSync()">CONNECT TO NETWORK</button>
+            
             <div style="height: 1px; background: #333; margin: 20px 0;"></div>
+            
             <label>tinyDjHostIP</label>
             <input type="text" id="hostIp" placeholder="192.168.x.x" onchange="manualIpChange(this.value)">
+            
             <button class="ctrl-btn" style="width: 100%; margin-top: 15px;" onclick="toggleModal()">CLOSE</button>
         </div>
     </div>
@@ -138,6 +147,8 @@
         async function oneClickSync() {
             const ssid = document.getElementById('ssid').value;
             const pass = document.getElementById('pass').value;
+            if(!ssid || !pass) return updateStatus("SSID/PASS REQ", "red");
+            
             try {
                 const service = await getBleService();
                 updateStatus("Syncing...");
@@ -160,22 +171,31 @@
 
         async function keepTryingFetch(service) {
             syncBtn.innerText = "WAITING FOR IP...";
-            const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
-            const check = async () => {
-                const buf = await ipChar.readValue();
-                const ip = new TextDecoder().decode(buf);
-                if (ip.includes('.') && !ip.includes('Connecting')) {
-                    manualIpChange(ip);
-                    hostIpInput.value = ip;
-                    syncBtn.innerText = "✓ CONNECTED";
-                    syncBtn.classList.add('btn-success');
-                    updateStatus("SUCCESS", "var(--cyan)");
-                    setTimeout(() => { toggleModal(); syncBtn.classList.remove('btn-success'); syncBtn.innerText="CONNECT TO NETWORK"; }, 2000);
-                } else {
-                    setTimeout(check, 2000);
-                }
-            };
-            check();
+            try {
+                const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
+                const check = async () => {
+                    try {
+                        const buf = await ipChar.readValue();
+                        const ip = new TextDecoder().decode(buf);
+                        if (ip.includes('.') && !ip.toLowerCase().includes('connecting')) {
+                            manualIpChange(ip);
+                            hostIpInput.value = ip;
+                            syncBtn.innerText = "✓ CONNECTED";
+                            syncBtn.classList.add('btn-success');
+                            updateStatus("SUCCESS", "var(--cyan)");
+                            setTimeout(() => { 
+                                toggleModal(); 
+                                syncBtn.classList.remove('btn-success'); 
+                                syncBtn.innerText="CONNECT TO NETWORK"; 
+                                updateStatus("Ready");
+                            }, 2000);
+                        } else {
+                            setTimeout(check, 2000);
+                        }
+                    } catch(e) { setTimeout(check, 2000); }
+                };
+                check();
+            } catch (e) { updateStatus("FETCH ERR", "red"); }
         }
 
         function handlePaste(e) {
@@ -189,8 +209,9 @@
 
         function hitEndpoint(p) {
             const ip = hostIpInput.value;
+            updateStatus(`${p.toUpperCase()}...`, "var(--cyan)");
             fetch(`http://${ip}:7979/${p}`, { mode: 'no-cors' })
-                .then(() => updateStatus("SENT", "#00ff00"))
+                .then(() => { updateStatus("SENT", "#00ff00"); setTimeout(() => updateStatus("Ready"), 1500); })
                 .catch(() => updateStatus("OFFLINE", "red"));
         }
 
