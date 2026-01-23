@@ -10,10 +10,13 @@
         
         .card { background: var(--card-bg); width: 100%; max-width: 380px; padding: 40px 24px; border-radius: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); text-align: center; border: 1px solid #333; z-index: 10; position: relative; }
         
+        /* Fixed ASCII Header */
+        .ascii-container { display: flex; justify-content: center; width: 100%; margin-bottom: 20px; }
         .ascii-header {
-            font-family: monospace; white-space: pre; font-size: 10px; line-height: 1.2; margin-bottom: 24px;
-            display: inline-block; background: linear-gradient(to right, var(--accent), var(--cyan));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold;
+            margin: 0; font-family: monospace; font-size: 10px; line-height: 1.2;
+            background: linear-gradient(to right, var(--accent), var(--cyan));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            font-weight: bold; text-align: left; display: block; white-space: pre;
         }
 
         .main-display { margin-bottom: 25px; }
@@ -33,10 +36,11 @@
         .action-btn { 
             background: linear-gradient(45deg, var(--accent), #7d82ff); color: white; border: none; 
             padding: 16px; border-radius: 14px; font-size: 14px; font-weight: 600; cursor: pointer; 
-            width: 100%; margin-top: 10px; transition: transform 0.1s; 
+            width: 100%; margin-top: 10px; transition: all 0.2s; 
         }
         .action-btn:active { transform: scale(0.98); }
         .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-success { background: #00ff00 !important; color: #000 !important; }
 
         .top-bar, .bottom-bar { position: fixed; left: 0; right: 0; background: #0a0a0a; padding: 10px 20px; display: flex; align-items: center; z-index: 100; border-bottom: 1px solid #222; }
         .top-bar { top: 0; justify-content: space-between; }
@@ -85,13 +89,15 @@
     </div>
 
     <div class="card">
-        <div class="ascii-header">
+        <div class="ascii-container">
+            <pre class="ascii-header">
   __  _                ____    _
  / /_(_)___  __  __   / __ \  (_)
 / __/ / __ \/ / / /  / / / / / / 
 / /_/ / / / / /_/ /  / /_/ / / /  
 \__/_/_/ /_/\__, /   /_____/_/ /   
            /____/         /___/    
+            </pre>
         </div>
 
         <div class="main-display">
@@ -115,7 +121,7 @@
     <div class="modal-overlay" id="settingsModal">
         <div class="modal">
             <h3 style="margin: 0 0 10px 0; color: var(--cyan); letter-spacing: 1px;">WIFI SETUP</h3>
-            <p style="color: #666; font-size: 11px; margin-bottom: 20px;">1. Sync Credentials → 2. Fetch IP</p>
+            <p style="color: #666; font-size: 11px; margin-bottom: 20px;">1. Sync Credentials → 2. Fetch Fresh IP</p>
             
             <div class="input-group">
                 <label>SSID</label>
@@ -155,6 +161,7 @@
         const passInput = document.getElementById('pass');
         const statusDiv = document.getElementById('status');
         const loader = document.getElementById('loader');
+        const syncBtn = document.getElementById('syncBtn');
 
         const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
         const CHAR_IP_UUID = '12345678-1234-5678-1234-56789abcdef1';
@@ -199,20 +206,26 @@
                 const encoder = new TextEncoder();
 
                 updateStatus("Sending SSID...");
-                const sChar = await service.getCharacteristic(CHAR_SSID_UUID);
-                await sChar.writeValue(encoder.encode(ssid));
+                await (await service.getCharacteristic(CHAR_SSID_UUID)).writeValue(encoder.encode(ssid));
 
                 updateStatus("Sending Password...");
-                const pChar = await service.getCharacteristic(CHAR_PASS_UUID);
-                await pChar.writeValue(encoder.encode(pass));
+                await (await service.getCharacteristic(CHAR_PASS_UUID)).writeValue(encoder.encode(pass));
 
-                updateStatus("WiFi Resetting...", "var(--cyan)");
+                // Success Feedback
+                toggleLoader(false);
+                updateStatus("CREDENTIALS SYNCED", "#00ff00");
+                
+                const originalText = syncBtn.innerText;
+                syncBtn.innerText = "✓ SYNCED TO TINYDJ";
+                syncBtn.classList.add('btn-success');
+
                 setTimeout(() => {
-                    toggleLoader(false);
+                    syncBtn.innerText = originalText;
+                    syncBtn.classList.remove('btn-success');
                     updateStatus("Wait 10s then Fetch IP", "#ffaa00");
-                }, 3000);
+                }, 3500);
             } catch (err) {
-                updateStatus("SYNC ERR: " + err.message.substring(0,15), "#ff4444");
+                updateStatus("SYNC ERR", "#ff4444");
                 toggleLoader(false);
             }
         }
@@ -249,14 +262,13 @@
             updateStatus(`${path}...`, "var(--cyan)");
             fetch(`http://${currentIp}:7979/${path}`, { mode: 'no-cors' })
                 .then(() => { updateStatus("SENT", "#00ff00"); setTimeout(() => updateStatus("Ready"), 1500); })
-                .catch(() => updateStatus("IP UNREACHABLE", "#ff4444"));
+                .catch(() => updateStatus("UNREACHABLE", "#ff4444"));
         }
 
         function toggleModal() { modal.classList.toggle('modal-open'); }
         function updateStatus(msg, color = "#555") { statusDiv.innerText = msg; statusDiv.style.color = color; }
         function toggleLoader(show) { loader.style.display = show ? "block" : "none"; }
 
-        // Initial Load
         window.addEventListener('DOMContentLoaded', () => {
             const savedIp = localStorage.getItem('tinyDjHostIp') || "tinydj.local";
             hostIpInput.value = savedIp;
