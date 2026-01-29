@@ -48,6 +48,24 @@
 
         .cast-input { background:#000; border:1px solid #333; color:white; padding:10px; border-radius:10px; flex-grow:1; font-family:monospace; margin-bottom: 0 !important; }
         .cast-send { background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 11px; }
+        .vpn-btn { 
+            background: transparent; 
+            border: 1px solid var(--cyan); 
+            color: var(--cyan); 
+            padding: 12px; 
+            border-radius: 12px; 
+            font-family: monospace; 
+            font-weight: bold; 
+            cursor: pointer; 
+            width: 100%; 
+            margin-top: 10px; 
+            transition: all 0.2s; 
+            text-transform: uppercase;
+        }
+        .vpn-btn:hover { 
+            background: var(--cyan); 
+            color: #000; 
+        }
     </style>
 </head>
 <body>
@@ -103,6 +121,7 @@
             <input type="text" id="hostIp" placeholder="tinydj.local" onchange="manualIpChange(this.value)">
             
             <button class="action-btn" id="syncBtn" onclick="oneClickSync()">Sync WiFi & Get IP</button>
+            <button class="vpn-btn" onclick="hitEndpoint('vnvpn')">VN-VPN</button>
             <button class="ctrl-btn" style="width: 100%; margin-top: 15px; border-color:#555; color:#888" onclick="toggleModal()">CLOSE</button>
         </div>
     </div>
