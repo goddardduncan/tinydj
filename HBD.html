@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy 40th Ollie!</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            text-align: center;
+        }
+
+        /* Message Styling */
+        #message-container {
+            z-index: 10;
+            padding: 20px;
+            max-width: 80%;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700;
+        }
+
+        p {
+            font-size: 1.5rem;
+            line-height: 1.6;
+        }
+
+        /* Gift Box Styling */
+        #gift-container {
+            margin-top: 30px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        #gift-container:hover {
+            transform: scale(1.1);
+        }
+
+        #gift-emoji {
+            font-size: 80px;
+            display: block;
+        }
+
+        #reveal-link {
+            display: none;
+            font-size: 1.5rem;
+            color: #ffd700;
+            text-decoration: none;
+            border: 2px solid #ffd700;
+            padding: 10px 20px;
+            border-radius: 10px;
+            animation: fadeIn 1s forwards;
+        }
+
+        /* Rain/Glitter Styling */
+        .particle {
+            position: absolute;
+            top: -50px;
+            user-select: none;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(105vh) rotate(360deg);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="message-container">
+        <h1>Happy 40th Ollie!</h1>
+        <p>Wishing you the very best of times for this very special year.</p>
+        <p>Lots of love, your friends Josh and Duncan.</p>
+
+        <div id="gift-container" onclick="revealGift()">
+            <span id="gift-emoji">🎁</span>
+            <a href="https://tinydj.dunc.app" id="reveal-link" target="_blank">Click Here for Your Surprise!</a>
+        </div>
+    </div>
+
+    <script>
+        const emojis = ['✨', '🎉', '🎊', '✨', '🎈', '🥳', '⭐'];
+        
+        function createParticle() {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            
+            // Randomize appearance
+            particle.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+            particle.style.left = Math.random() * 100 + 'vw';
+            particle.style.fontSize = (Math.random() * 20 + 10) + 'px';
+            
+            // Randomize fall duration and delay
+            const duration = Math.random() * 3 + 2; 
+            particle.style.animation = `fall ${duration}s linear forwards`;
+            
+            document.body.appendChild(particle);
+
+            // Clean up elements after they fall
+            setTimeout(() => {
+                particle.remove();
+            }, duration * 1000);
+        }
+
+        // Continually create particles
+        setInterval(createParticle, 100);
+
+        function revealGift() {
+            const gift = document.getElementById('gift-emoji');
+            const link = document.getElementById('reveal-link');
+            
+            gift.style.transition = "opacity 0.5s ease";
+            gift.style.opacity = "0";
+            
+            setTimeout(() => {
+                gift.style.display = "none";
+                link.style.display = "inline-block";
+            }, 500);
+        }
+    </script>
+</body>
+</html>
