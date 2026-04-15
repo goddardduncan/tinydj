@@ -22,8 +22,7 @@
             margin: 0; 
             color: white; 
             overflow-x: hidden;
-            /* Added padding to prevent the top-bar from overlapping the card */
-            padding-top: 80px; 
+            padding-top: 100px; 
             padding-bottom: 80px;
         }
         
@@ -36,7 +35,7 @@
             background: #0a0a0a; 
             padding: 12px 20px; 
             display: flex; 
-            flex-direction: column; /* Stack link rows and settings */
+            flex-direction: column; 
             align-items: center; 
             gap: 10px;
             z-index: 100; 
@@ -45,7 +44,7 @@
 
         .nav-group { 
             display: flex; 
-            flex-wrap: wrap; /* Allows buttons to drop to a second row */
+            flex-wrap: wrap; 
             justify-content: center; 
             gap: 6px; 
             width: 100%;
@@ -64,12 +63,13 @@
             font-family: monospace; 
             white-space: nowrap; 
             transition: 0.2s; 
-            flex: 1 1 auto; /* Fill available row space */
+            flex: 1 1 auto; 
             text-align: center;
             max-width: 80px;
         }
 
         .nav-btn:hover { background: var(--accent); color: #fff; }
+        .hidden { display: none !important; }
 
         .settings-trigger { 
             background: none; 
@@ -163,7 +163,6 @@
         }
         .btn-success { background: #00ff00 !important; color: #000 !important; }
         
-        /* --- MODAL --- */
         .modal-overlay { 
             position: fixed; 
             top: 0; 
@@ -193,7 +192,9 @@
             outline: none; 
             margin-bottom: 15px; 
         }
-        input:focus { border-color: var(--cyan); }
+        .check-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .check-row input { width: auto; margin: 0; cursor: pointer; }
+        .check-row span { font-size: 12px; color: #ccc; }
         
         #status { margin-top: 24px; font-size: 12px; font-family: monospace; color: #555; text-align: center; }
 
@@ -214,7 +215,6 @@
             transition: all 0.2s; 
             text-transform: uppercase;
         }
-        .vpn-btn:hover { background: var(--cyan); color: #000; }
     </style>
 </head>
 <body>
@@ -259,18 +259,25 @@
 
     <div class="modal-overlay" id="settingsModal">
         <div class="modal">
-            <h3 style="margin-top:0; color:var(--cyan)">WIFI SETUP</h3>
-            <p style="font-size: 11px; color:#666; margin-bottom:20px;">Update credentials and retrieve IP</p>
+            <h3 style="margin-top:0; color:var(--cyan)">SETTINGS</h3>
             
-            <label>SSID</label>
+            <label>WiFi SSID</label>
             <input type="text" id="ssid" placeholder="Network Name">
             
-            <label>Passphrase</label>
+            <label>WiFi Passphrase</label>
             <input type="password" id="pass" placeholder="••••••••">
             
-            <label>Host IP (Remote Control)</label>
+            <label>Host IP</label>
             <input type="text" id="hostIp" placeholder="tinydj.local" onchange="manualIpChange(this.value)">
             
+            <label>Toggle Visibility</label>
+            <div class="check-row">
+                <input type="checkbox" id="checkMbit" onchange="updateVisibility()"> <span>Show M-BIT</span>
+            </div>
+            <div class="check-row" style="margin-bottom: 20px;">
+                <input type="checkbox" id="checkM" onchange="updateVisibility()"> <span>Show M</span>
+            </div>
+
             <button class="action-btn" id="syncBtn" onclick="oneClickSync()">Sync WiFi & Get IP</button>
             <button class="vpn-btn" onclick="hitEndpoint('vnvpn')">VN-VPN</button>
             <button class="ctrl-btn" style="width: 100%; margin-top: 15px; border-color:#555; color:#888" onclick="toggleModal()">CLOSE</button>
@@ -289,7 +296,6 @@
         const syncBtn = document.getElementById('syncBtn');
         const castUrlInput = document.getElementById('castUrl');
         
-        // UUIDs for BLE interaction
         const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
         const CHAR_IP_UUID = '12345678-1234-5678-1234-56789abcdef1';
         const CHAR_SSID_UUID = '12345678-1234-5678-1234-56789abcdef2';
@@ -299,23 +305,15 @@
         const spinnerFrames = ['-', '\\', '|', '/'];
         let spinIdx = 0;
 
-        // KEYBOARD SHORTCUTS
-        document.addEventListener('keydown', (e) => {
-            if (document.activeElement.tagName === 'INPUT') return;
-            if (e.key === 'ArrowLeft') hitEndpoint('ui/prev');
-            if (e.key === 'ArrowUp') hitEndpoint('epg');
-            if (e.key === 'ArrowRight') hitEndpoint('ui/next');
-            if (e.code === 'Space') { e.preventDefault(); hitEndpoint('pause'); }
-        });
-
-        // ENTER KEY FOR CAST
-        castUrlInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleCast();
-        });
-
-        function updateStatus(msg, color = "#555") { 
-            const s = document.getElementById('status');
-            s.innerText = msg; s.style.color = color; 
+        function updateVisibility() {
+            const showMbit = document.getElementById('checkMbit').checked;
+            const showM = document.getElementById('checkM').checked;
+            
+            document.getElementById('mbit-link').classList.toggle('hidden', !showMbit);
+            document.getElementById('mps-link').classList.toggle('hidden', !showM);
+            
+            localStorage.setItem('tinyDj_showMbit', showMbit);
+            localStorage.setItem('tinyDj_showM', showM);
         }
 
         function toggleModal() { 
@@ -354,14 +352,12 @@
             const ssid = document.getElementById('ssid').value;
             const pass = document.getElementById('pass').value;
             if(!ssid || !pass) return updateStatus("SSID/PASS REQ", "red");
-            
             try {
                 const service = await getBleService();
                 updateStatus("Syncing...");
                 const enc = new TextEncoder();
                 await (await service.getCharacteristic(CHAR_SSID_UUID)).writeValue(enc.encode(ssid));
                 await (await service.getCharacteristic(CHAR_PASS_UUID)).writeValue(enc.encode(pass));
-                
                 let count = 12;
                 const interval = setInterval(() => {
                     syncBtn.innerText = `${spinnerFrames[spinIdx]} CONNECTING ${count}s`;
@@ -377,58 +373,39 @@
 
         async function keepTryingFetch(service) {
             syncBtn.innerText = "WAITING FOR IP...";
-            try {
-                const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
-                const check = async () => {
-                    try {
-                        const buf = await ipChar.readValue();
-                        const ip = new TextDecoder().decode(buf);
-                        if (ip.includes('.') && !ip.toLowerCase().includes('connecting')) {
-                            manualIpChange(ip);
-                            hostIpInput.value = ip;
-                            syncBtn.innerText = "✓ CONNECTED";
-                            syncBtn.classList.add('btn-success');
-                            updateStatus("SUCCESS", "var(--cyan)");
-                            setTimeout(() => { 
-                                toggleModal(); 
-                                syncBtn.classList.remove('btn-success'); 
-                                syncBtn.innerText="Sync WiFi & Get IP"; 
-                                updateStatus("Ready");
-                            }, 2000);
-                        } else {
-                            setTimeout(check, 2000);
-                        }
-                    } catch(e) { setTimeout(check, 2000); }
-                };
-                check();
-            } catch (e) { updateStatus("FETCH ERR", "red"); }
+            const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
+            const check = async () => {
+                try {
+                    const buf = await ipChar.readValue();
+                    const ip = new TextDecoder().decode(buf);
+                    if (ip.includes('.') && !ip.toLowerCase().includes('connecting')) {
+                        manualIpChange(ip);
+                        hostIpInput.value = ip;
+                        syncBtn.innerText = "✓ CONNECTED";
+                        syncBtn.classList.add('btn-success');
+                        updateStatus("SUCCESS", "var(--cyan)");
+                        setTimeout(() => { toggleModal(); syncBtn.classList.remove('btn-success'); syncBtn.innerText="Sync WiFi & Get IP"; updateStatus("Ready"); }, 2000);
+                    } else { setTimeout(check, 2000); }
+                } catch(e) { setTimeout(check, 2000); }
+            };
+            check();
         }
 
         function handleCast() {
             const url = castUrlInput.value.trim();
             const ip = hostIpInput.value.trim();
-            if(!url) return updateStatus("NO URL", "red");
-            if(!ip || ip === "--.--.--.--") return updateStatus("SET IP FIRST", "red");
-            
+            if(!url || !ip || ip === "--.--.--.--") return updateStatus("ERR: URL/IP", "red");
             updateStatus("CASTING...", "var(--cyan)");
             fetch(`http://${ip}:7979/${encodeURIComponent(url)}`, { mode: 'no-cors' })
-                .then(() => {
-                    updateStatus("CAST SENT", "#00ff00");
-                    castUrlInput.value = ""; 
-                    castUrlInput.blur(); 
-                    setTimeout(() => updateStatus("Ready"), 2000);
-                })
-                .catch(() => updateStatus("CAST FAILED", "red"));
+                .then(() => { updateStatus("CAST SENT", "#00ff00"); castUrlInput.value = ""; setTimeout(() => updateStatus("Ready"), 2000); })
+                .catch(() => updateStatus("FAILED", "red"));
         }
 
         function hitEndpoint(p) {
             const ip = hostIpInput.value.trim();
             updateStatus(`${p.toUpperCase()}...`, "var(--cyan)");
             fetch(`http://${ip}:7979/${p}`, { mode: 'no-cors' })
-                .then(() => { 
-                    updateStatus("SENT", "#00ff00"); 
-                    setTimeout(() => updateStatus("Ready"), 1500); 
-                })
+                .then(() => { updateStatus("SENT", "#00ff00"); setTimeout(() => updateStatus("Ready"), 1500); })
                 .catch(() => updateStatus("OFFLINE", "red"));
         }
 
@@ -437,7 +414,23 @@
             hostIpInput.value = saved;
             ipDisplay.innerText = `IP: ${saved}`;
             updateLinks(saved);
+
+            const mbitOn = localStorage.getItem('tinyDj_showMbit') === 'true';
+            const mOn = localStorage.getItem('tinyDj_showM') === 'true';
+            document.getElementById('checkMbit').checked = mbitOn;
+            document.getElementById('checkM').checked = mOn;
+            updateVisibility();
         };
+
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            if (e.key === 'ArrowLeft') hitEndpoint('ui/prev');
+            if (e.key === 'ArrowUp') hitEndpoint('epg');
+            if (e.key === 'ArrowRight') hitEndpoint('ui/next');
+            if (e.code === 'Space') { e.preventDefault(); hitEndpoint('pause'); }
+        });
+        castUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleCast(); });
+        function updateStatus(msg, color = "#555") { const s = document.getElementById('status'); s.innerText = msg; s.style.color = color; }
     </script>
 </body>
 </html>
