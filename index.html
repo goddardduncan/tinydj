@@ -5,13 +5,127 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>tinyDJ Remote</title>
     <style>
-        :root { --accent: #bf00ff; --cyan: #00ffff; --bg: #0f0f0f; --card-bg: #1a1a1a; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; overflow: hidden; }
+        :root { 
+            --accent: #bf00ff; 
+            --cyan: #00ffff; 
+            --bg: #0f0f0f; 
+            --card-bg: #1a1a1a; 
+        }
+
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            color: white; 
+            overflow-x: hidden;
+            /* Added padding to prevent the top-bar from overlapping the card */
+            padding-top: 80px; 
+            padding-bottom: 80px;
+        }
         
-        .card { background: var(--card-bg); width: 100%; max-width: 380px; padding: 40px 24px; border-radius: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); text-align: center; border: 1px solid #333; z-index: 10; position: relative; }
+        /* --- NAVIGATION BARS --- */
+        .top-bar { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            background: #0a0a0a; 
+            padding: 12px 20px; 
+            display: flex; 
+            flex-direction: column; /* Stack link rows and settings */
+            align-items: center; 
+            gap: 10px;
+            z-index: 100; 
+            border-bottom: 1px solid #222; 
+        }
+
+        .nav-group { 
+            display: flex; 
+            flex-wrap: wrap; /* Allows buttons to drop to a second row */
+            justify-content: center; 
+            gap: 6px; 
+            width: 100%;
+        }
+
+        .nav-btn { 
+            background: #1a0026; 
+            border: 1px solid var(--accent); 
+            color: var(--accent); 
+            padding: 8px 10px; 
+            border-radius: 8px; 
+            font-size: 10px; 
+            font-weight: 700; 
+            text-decoration: none; 
+            text-transform: uppercase; 
+            font-family: monospace; 
+            white-space: nowrap; 
+            transition: 0.2s; 
+            flex: 1 1 auto; /* Fill available row space */
+            text-align: center;
+            max-width: 80px;
+        }
+
+        .nav-btn:hover { background: var(--accent); color: #fff; }
+
+        .settings-trigger { 
+            background: none; 
+            border: 1px solid #444; 
+            color: #888; 
+            padding: 6px 16px; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-size: 11px; 
+            font-weight: 800; 
+            transition: 0.2s; 
+            text-transform: uppercase;
+        }
+        .settings-trigger:hover { border-color: var(--cyan); color: var(--cyan); }
+
+        .bottom-bar { 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            background: #0a0a0a; 
+            padding: 12px 20px; 
+            display: flex; 
+            align-items: center; 
+            z-index: 100; 
+            border-top: 1px solid #222; 
+            gap: 10px; 
+        }
+
+        /* --- MAIN CARD --- */
+        .card { 
+            background: var(--card-bg); 
+            width: 90%; 
+            max-width: 380px; 
+            padding: 30px 24px; 
+            border-radius: 32px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7); 
+            text-align: center; 
+            border: 1px solid #333; 
+            z-index: 10; 
+            position: relative; 
+        }
         
         .ascii-container { display: flex; justify-content: center; width: 100%; margin-bottom: 20px; }
-        .ascii-header { margin: 0; font-family: monospace; font-size: 10px; line-height: 1.2; background: linear-gradient(to right, var(--accent), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: bold; text-align: left; white-space: pre; }
+        .ascii-header { 
+            margin: 0; 
+            font-family: monospace; 
+            font-size: 10px; 
+            line-height: 1.2; 
+            background: linear-gradient(to right, var(--accent), var(--cyan)); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            font-weight: bold; 
+            text-align: left; 
+            white-space: pre; 
+        }
         
         .main-display { margin-bottom: 25px; }
         .main-display h1 { font-size: 24px; margin: 0; font-weight: 500; }
@@ -19,35 +133,73 @@
         
         .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
         
-        .ctrl-btn { background: #252525; border: 1px solid #444; color: var(--cyan); padding: 20px 5px; border-radius: 18px; font-family: monospace; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 13px; }
+        .ctrl-btn { 
+            background: #252525; 
+            border: 1px solid #444; 
+            color: var(--cyan); 
+            padding: 20px 5px; 
+            border-radius: 18px; 
+            font-family: monospace; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            font-size: 13px; 
+        }
         .ctrl-btn:hover { background: var(--cyan); color: #000; border-color: var(--cyan); }
         
-        .action-btn { background: linear-gradient(45deg, var(--accent), #7d82ff); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 13px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 10px; transition: all 0.3s; font-family: monospace; }
+        .action-btn { 
+            background: linear-gradient(45deg, var(--accent), #7d82ff); 
+            color: white; 
+            border: none; 
+            padding: 18px; 
+            border-radius: 16px; 
+            font-size: 13px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            width: 100%; 
+            margin-top: 10px; 
+            transition: all 0.3s; 
+            font-family: monospace; 
+        }
         .btn-success { background: #00ff00 !important; color: #000 !important; }
         
-        .top-bar, .bottom-bar { position: fixed; left: 0; right: 0; background: #0a0a0a; padding: 10px 20px; display: flex; align-items: center; z-index: 100; border-bottom: 1px solid #222; }
-        .top-bar { top: 0; justify-content: space-between; }
-        .bottom-bar { bottom: 0; border-top: 1px solid #222; gap: 10px; }
-        
-        .nav-group { display: flex; gap: 8px; overflow-x: auto; }
-        .nav-btn { background: #1a0026; border: 1px solid var(--accent); color: var(--accent); padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 700; text-decoration: none; text-transform: uppercase; font-family: monospace; white-space: nowrap; transition: 0.2s; }
-        .nav-btn:hover { background: var(--accent); color: #fff; }
-
-        .settings-trigger { background: none; border: 1px solid #444; color: #888; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 11px; font-weight: 800; transition: 0.2s; }
-        .settings-trigger:hover { border-color: var(--cyan); color: var(--cyan); }
-
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        /* --- MODAL --- */
+        .modal-overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.85); 
+            backdrop-filter: blur(10px); 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 1000; 
+        }
         .modal-open { display: flex; }
         .modal { background: #1a1a1a; width: 90%; max-width: 340px; padding: 30px; border-radius: 28px; border: 1px solid #333; }
         
         label { display: block; font-size: 10px; margin-bottom: 6px; color: var(--accent); font-weight: 800; text-transform: uppercase; }
-        input { width: 100%; padding: 12px; background: #000; border: 1px solid #333; border-radius: 12px; color: white; font-size: 14px; box-sizing: border-box; outline: none; margin-bottom: 15px; }
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            background: #000; 
+            border: 1px solid #333; 
+            border-radius: 12px; 
+            color: white; 
+            font-size: 14px; 
+            box-sizing: border-box; 
+            outline: none; 
+            margin-bottom: 15px; 
+        }
         input:focus { border-color: var(--cyan); }
         
         #status { margin-top: 24px; font-size: 12px; font-family: monospace; color: #555; text-align: center; }
 
         .cast-input { background:#000; border:1px solid #333; color:white; padding:10px; border-radius:10px; flex-grow:1; font-family:monospace; margin-bottom: 0 !important; }
         .cast-send { background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 11px; }
+        
         .vpn-btn { 
             background: transparent; 
             border: 1px solid var(--cyan); 
@@ -62,10 +214,7 @@
             transition: all 0.2s; 
             text-transform: uppercase;
         }
-        .vpn-btn:hover { 
-            background: var(--cyan); 
-            color: #000; 
-        }
+        .vpn-btn:hover { background: var(--cyan); color: #000; }
     </style>
 </head>
 <body>
@@ -84,8 +233,8 @@
     <div class="card">
         <div class="ascii-container">
 <pre class="ascii-header">
-   __  _                ____    _
-  / /_(_)___  __  __   / __ \  (_'
+   __  _                 ____     _
+  / /_(_)___  __  __   / __ \   (_'
  / __/ / __ \/ / / /  / / / / / / 
 / /_/ / / / / /_/ /  / /_/ / / /  
 \__/_/_/ /_/\__, /  /_____/_/ /   
@@ -138,6 +287,8 @@
         const ipDisplay = document.getElementById('ip-display');
         const syncBtn = document.getElementById('syncBtn');
         const castUrlInput = document.getElementById('castUrl');
+        
+        // UUIDs for BLE interaction
         const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
         const CHAR_IP_UUID = '12345678-1234-5678-1234-56789abcdef1';
         const CHAR_SSID_UUID = '12345678-1234-5678-1234-56789abcdef2';
@@ -147,7 +298,7 @@
         const spinnerFrames = ['-', '\\', '|', '/'];
         let spinIdx = 0;
 
-        // NEW: Keyboard Shortcuts (Global)
+        // KEYBOARD SHORTCUTS
         document.addEventListener('keydown', (e) => {
             if (document.activeElement.tagName === 'INPUT') return;
             if (e.key === 'ArrowLeft') hitEndpoint('ui/prev');
@@ -156,11 +307,9 @@
             if (e.code === 'Space') { e.preventDefault(); hitEndpoint('pause'); }
         });
 
-        // NEW: Enter Key for Cast Bar
+        // ENTER KEY FOR CAST
         castUrlInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                handleCast();
-            }
+            if (e.key === 'Enter') handleCast();
         });
 
         function updateStatus(msg, color = "#555") { 
@@ -168,7 +317,9 @@
             s.innerText = msg; s.style.color = color; 
         }
 
-        function toggleModal() { document.getElementById('settingsModal').classList.toggle('modal-open'); }
+        function toggleModal() { 
+            document.getElementById('settingsModal').classList.toggle('modal-open'); 
+        }
 
         function manualIpChange(val) {
             localStorage.setItem('tinyDjHostIp', val);
@@ -189,7 +340,10 @@
 
         async function getBleService() {
             if (activeDevice && activeDevice.gatt.connected) return await activeDevice.gatt.getPrimaryService(SERVICE_UUID);
-            activeDevice = await navigator.bluetooth.requestDevice({ filters: [{ namePrefix: 'tinyDJ' }], optionalServices: [SERVICE_UUID] });
+            activeDevice = await navigator.bluetooth.requestDevice({ 
+                filters: [{ namePrefix: 'tinyDJ' }], 
+                optionalServices: [SERVICE_UUID] 
+            });
             const server = await activeDevice.gatt.connect();
             return await server.getPrimaryService(SERVICE_UUID);
         }
@@ -258,8 +412,8 @@
             fetch(`http://${ip}:7979/${encodeURIComponent(url)}`, { mode: 'no-cors' })
                 .then(() => {
                     updateStatus("CAST SENT", "#00ff00");
-                    castUrlInput.value = ""; // Clear on success
-                    castUrlInput.blur(); // Remove focus
+                    castUrlInput.value = ""; 
+                    castUrlInput.blur(); 
                     setTimeout(() => updateStatus("Ready"), 2000);
                 })
                 .catch(() => updateStatus("CAST FAILED", "red"));
@@ -269,7 +423,10 @@
             const ip = hostIpInput.value.trim();
             updateStatus(`${p.toUpperCase()}...`, "var(--cyan)");
             fetch(`http://${ip}:7979/${p}`, { mode: 'no-cors' })
-                .then(() => { updateStatus("SENT", "#00ff00"); setTimeout(() => updateStatus("Ready"), 1500); })
+                .then(() => { 
+                    updateStatus("SENT", "#00ff00"); 
+                    setTimeout(() => updateStatus("Ready"), 1500); 
+                })
                 .catch(() => updateStatus("OFFLINE", "red"));
         }
 
