@@ -24,6 +24,7 @@
             overflow-x: hidden;
             padding-top: 100px; 
             padding-bottom: 80px;
+            transition: padding-bottom 0.2s ease;
         }
         
         /* --- NAVIGATION BARS --- */
@@ -195,26 +196,42 @@
         .check-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
         .check-row input { width: auto; margin: 0; cursor: pointer; }
         .check-row span { font-size: 12px; color: #ccc; }
+
+        /* --- TOGGLE VISIBILITY GRID (2x2, adaptive) --- */
+        .toggle-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 12px;
+            margin-bottom: 20px;
+        }
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #111;
+            border: 1px solid #2a2a2a;
+            border-radius: 10px;
+            padding: 8px 10px;
+            min-width: 0;
+        }
+        .toggle-item input[type="checkbox"] {
+            width: auto;
+            flex-shrink: 0;
+            margin: 0;
+            cursor: pointer;
+        }
+        .toggle-item span {
+            font-size: clamp(9px, 2.8vw, 11px);
+            color: #ccc;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
         
         #status { margin-top: 24px; font-size: 12px; font-family: monospace; color: #555; text-align: center; }
 
         .cast-input { background:#000; border:1px solid #333; color:white; padding:10px; border-radius:10px; flex-grow:1; font-family:monospace; margin-bottom: 0 !important; }
         .cast-send { background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 11px; }
-        
-        .vpn-btn { 
-            background: transparent; 
-            border: 1px solid var(--cyan); 
-            color: var(--cyan); 
-            padding: 12px; 
-            border-radius: 12px; 
-            font-family: monospace; 
-            font-weight: bold; 
-            cursor: pointer; 
-            width: 100%; 
-            margin-top: 10px; 
-            transition: all 0.2s; 
-            text-transform: uppercase;
-        }
     </style>
 </head>
 <body>
@@ -267,24 +284,33 @@
             <label>WiFi Passphrase</label>
             <input type="password" id="pass" placeholder="••••••••">
             
-            <label>Host IP</label>
-            <input type="text" id="hostIp" placeholder="tinydj.local" onchange="manualIpChange(this.value)">
+            <div id="hostIpRow">
+                <label>Host IP</label>
+                <input type="text" id="hostIp" placeholder="tinydj.local" onchange="manualIpChange(this.value)">
+            </div>
             
             <label>Toggle Visibility</label>
-            <div class="check-row">
-                <input type="checkbox" id="checkMbit" onchange="updateVisibility()"> <span>Show M-BIT</span>
-            </div>
-            <div class="check-row" style="margin-bottom: 20px;">
-                <input type="checkbox" id="checkM" onchange="updateVisibility()"> <span>Show M</span>
+            <div class="toggle-grid">
+                <div class="toggle-item">
+                    <input type="checkbox" id="checkMbit" onchange="updateVisibility()"> <span>M-BIT</span>
+                </div>
+                <div class="toggle-item">
+                    <input type="checkbox" id="checkM" onchange="updateVisibility()"> <span>M</span>
+                </div>
+                <div class="toggle-item">
+                    <input type="checkbox" id="checkHostIp" onchange="updateVisibility()"> <span>HOST IP</span>
+                </div>
+                <div class="toggle-item">
+                    <input type="checkbox" id="checkCast" onchange="updateVisibility()"> <span>CAST URL</span>
+                </div>
             </div>
 
             <button class="action-btn" id="syncBtn" onclick="oneClickSync()">Sync WiFi & Get IP</button>
-            <button class="vpn-btn" onclick="hitEndpoint('vnvpn')">VN-VPN</button>
             <button class="ctrl-btn" style="width: 100%; margin-top: 15px; border-color:#555; color:#888" onclick="toggleModal()">CLOSE</button>
         </div>
     </div>
 
-    <div class="bottom-bar">
+    <div class="bottom-bar hidden" id="bottomBar">
         <label style="font-size: 10px; color: var(--cyan); font-weight: 800;">REMOTE</label>
         <input type="text" id="castUrl" class="cast-input" placeholder="Paste URL and press Enter...">
         <button class="cast-send" onclick="handleCast()">CAST</button>
@@ -308,12 +334,21 @@
         function updateVisibility() {
             const showMbit = document.getElementById('checkMbit').checked;
             const showM = document.getElementById('checkM').checked;
+            const showHostIp = document.getElementById('checkHostIp').checked;
+            const showCast = document.getElementById('checkCast').checked;
             
             document.getElementById('mbit-link').classList.toggle('hidden', !showMbit);
             document.getElementById('mps-link').classList.toggle('hidden', !showM);
+            document.getElementById('hostIpRow').classList.toggle('hidden', !showHostIp);
+
+            const bottomBar = document.getElementById('bottomBar');
+            bottomBar.classList.toggle('hidden', !showCast);
+            document.body.style.paddingBottom = showCast ? '80px' : '20px';
             
             localStorage.setItem('tinyDj_showMbit', showMbit);
             localStorage.setItem('tinyDj_showM', showM);
+            localStorage.setItem('tinyDj_showHostIp', showHostIp);
+            localStorage.setItem('tinyDj_showCast', showCast);
         }
 
         function toggleModal() { 
@@ -417,8 +452,12 @@
 
             const mbitOn = localStorage.getItem('tinyDj_showMbit') === 'true';
             const mOn = localStorage.getItem('tinyDj_showM') === 'true';
+            const hostIpOn = localStorage.getItem('tinyDj_showHostIp') === 'true';
+            const castOn = localStorage.getItem('tinyDj_showCast') === 'true';
             document.getElementById('checkMbit').checked = mbitOn;
             document.getElementById('checkM').checked = mOn;
+            document.getElementById('checkHostIp').checked = hostIpOn;
+            document.getElementById('checkCast').checked = castOn;
             updateVisibility();
         };
 
