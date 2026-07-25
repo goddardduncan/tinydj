@@ -268,7 +268,7 @@
             <button class="ctrl-btn" onclick="hitEndpoint('ui/next')">NEXT</button>
         </div>
         <div class="nav-grid">
-            <button class="ctrl-btn" onclick="hitEndpoint('pause')">PLAY/PAUSE</button>
+            <button class="ctrl-btn hidden" id="playPauseBtn" onclick="hitEndpoint('pause')">PLAY/PAUSE</button>
             <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
         </div>
         <div id="status">READY</div>
@@ -303,6 +303,9 @@
                 <div class="toggle-item">
                     <input type="checkbox" id="checkCast" onchange="updateVisibility()"> <span>CAST URL</span>
                 </div>
+                <div class="toggle-item">
+                    <input type="checkbox" id="checkPlayPause" onchange="updateVisibility()"> <span>PLAY/PAUSE</span>
+                </div>
             </div>
 
             <button class="action-btn" id="syncBtn" onclick="oneClickSync()">Sync WiFi & Get IP</button>
@@ -336,10 +339,12 @@
             const showM = document.getElementById('checkM').checked;
             const showHostIp = document.getElementById('checkHostIp').checked;
             const showCast = document.getElementById('checkCast').checked;
+            const showPlayPause = document.getElementById('checkPlayPause').checked;
             
             document.getElementById('mbit-link').classList.toggle('hidden', !showMbit);
             document.getElementById('mps-link').classList.toggle('hidden', !showM);
             document.getElementById('hostIpRow').classList.toggle('hidden', !showHostIp);
+            document.getElementById('playPauseBtn').classList.toggle('hidden', !showPlayPause);
 
             const bottomBar = document.getElementById('bottomBar');
             bottomBar.classList.toggle('hidden', !showCast);
@@ -349,6 +354,7 @@
             localStorage.setItem('tinyDj_showM', showM);
             localStorage.setItem('tinyDj_showHostIp', showHostIp);
             localStorage.setItem('tinyDj_showCast', showCast);
+            localStorage.setItem('tinyDj_showPlayPause', showPlayPause);
         }
 
         function toggleModal() { 
@@ -454,10 +460,12 @@
             const mOn = localStorage.getItem('tinyDj_showM') === 'true';
             const hostIpOn = localStorage.getItem('tinyDj_showHostIp') === 'true';
             const castOn = localStorage.getItem('tinyDj_showCast') === 'true';
+            const playPauseOn = localStorage.getItem('tinyDj_showPlayPause') === 'true';
             document.getElementById('checkMbit').checked = mbitOn;
             document.getElementById('checkM').checked = mOn;
             document.getElementById('checkHostIp').checked = hostIpOn;
             document.getElementById('checkCast').checked = castOn;
+            document.getElementById('checkPlayPause').checked = playPauseOn;
             updateVisibility();
         };
 
