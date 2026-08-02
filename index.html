@@ -128,10 +128,56 @@
             white-space: pre; 
         }
         
-        .main-display { margin-bottom: 25px; }
+        .main-display { margin-bottom: 20px; }
         .main-display h1 { font-size: 24px; margin: 0; font-weight: 500; }
-        .ip-text { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px; font-family: monospace; }
+        .ip-text { color: #666; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-top: 8px; margin-bottom: 12px; font-family: monospace; }
         
+        /* --- SEEK SLIDER STYLES --- */
+        .seek-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        .seek-time {
+            display: flex;
+            justify-content: space-between;
+            font-family: monospace;
+            font-size: 10px;
+            color: #888;
+        }
+        .seek-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: #252525;
+            outline: none;
+            cursor: pointer;
+            border: 1px solid #333;
+        }
+        .seek-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--cyan);
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--cyan);
+        }
+        .seek-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--cyan);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 8px var(--cyan);
+        }
+
         .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
         
         .ctrl-btn { 
@@ -193,11 +239,8 @@
             outline: none; 
             margin-bottom: 15px; 
         }
-        .check-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
-        .check-row input { width: auto; margin: 0; cursor: pointer; }
-        .check-row span { font-size: 12px; color: #ccc; }
 
-        /* --- TOGGLE VISIBILITY GRID (2x2, adaptive) --- */
+        /* --- TOGGLE VISIBILITY GRID --- */
         .toggle-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -262,6 +305,15 @@
         <div class="main-display">
             <h1>CONTROLS</h1>
             <p id="ip-display" class="ip-text">IP: --.--.--.--</p>
+            
+            <!-- SEEK SLIDER CONTAINER -->
+            <div id="seekContainer" class="seek-container">
+                <input type="range" id="seekSlider" class="seek-slider" min="0" max="100" value="0" step="1">
+                <div class="seek-time">
+                    <span id="currTime">00:00</span>
+                    <span id="durTime">00:00</span>
+                </div>
+            </div>
         </div>
         <div class="nav-grid">
             <button class="ctrl-btn" onclick="hitEndpoint('ui/prev')">PREV</button>
@@ -291,6 +343,9 @@
             
             <label>Toggle Visibility</label>
             <div class="toggle-grid">
+                <div class="toggle-item">
+                    <input type="checkbox" id="checkSeek" onchange="updateVisibility()"> <span>SEEK BAR</span>
+                </div>
                 <div class="toggle-item">
                     <input type="checkbox" id="checkMbit" onchange="updateVisibility()"> <span>M-BIT</span>
                 </div>
@@ -324,6 +379,9 @@
         const ipDisplay = document.getElementById('ip-display');
         const syncBtn = document.getElementById('syncBtn');
         const castUrlInput = document.getElementById('castUrl');
+        const seekSlider = document.getElementById('seekSlider');
+        const currTimeLabel = document.getElementById('currTime');
+        const durTimeLabel = document.getElementById('durTime');
         
         const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
         const CHAR_IP_UUID = '12345678-1234-5678-1234-56789abcdef1';
@@ -334,13 +392,76 @@
         const spinnerFrames = ['-', '\\', '|', '/'];
         let spinIdx = 0;
 
+        let isDraggingSeek = false;
+        let suppressPollUntil = 0;
+
+        function formatTime(s) {
+            if (isNaN(s) || s < 0) return "00:00";
+            const mins = Math.floor(s / 60);
+            const secs = Math.floor(s % 60);
+            const hrs = Math.floor(mins / 60);
+            const remMins = mins % 60;
+            if (hrs > 0) {
+                return `${hrs}:${remMins < 10 ? '0' : ''}${remMins}:${secs < 10 ? '0' : ''}${secs}`;
+            }
+            return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        async function fetchStatus() {
+            if (Date.now() < suppressPollUntil || isDraggingSeek) return;
+            const ip = hostIpInput.value.trim();
+            if (!ip || ip === "--.--.--.--") return;
+
+            try {
+                const res = await fetch(`http://${ip}:7979/status`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (!isDraggingSeek) {
+                        const duration = data.duration || 0;
+                        const position = data.position || 0;
+                        seekSlider.max = Math.max(duration, 1);
+                        seekSlider.value = position;
+                        currTimeLabel.innerText = formatTime(position);
+                        durTimeLabel.innerText = formatTime(duration);
+                    }
+                }
+            } catch(e) {
+                // Silently ignore status polling failures when player is idle
+            }
+        }
+
+        // Seek slider events
+        seekSlider.addEventListener('input', (e) => {
+            isDraggingSeek = true;
+            currTimeLabel.innerText = formatTime(e.target.value);
+        });
+
+        seekSlider.addEventListener('change', (e) => {
+            const targetSec = Math.round(e.target.value);
+            const ip = hostIpInput.value.trim();
+            suppressPollUntil = Date.now() + 4000;
+            isDraggingSeek = false;
+
+            if (!ip || ip === "--.--.--.--") return updateStatus("ERR: NO IP", "red");
+
+            updateStatus(`SEEKING ${targetSec}s...`, "var(--cyan)");
+            fetch(`http://${ip}:7979/seek/${targetSec}`, { mode: 'no-cors' })
+                .then(() => { 
+                    updateStatus("SENT", "#00ff00"); 
+                    setTimeout(() => updateStatus("Ready"), 1500); 
+                })
+                .catch(() => updateStatus("OFFLINE", "red"));
+        });
+
         function updateVisibility() {
+            const showSeek = document.getElementById('checkSeek').checked;
             const showMbit = document.getElementById('checkMbit').checked;
             const showM = document.getElementById('checkM').checked;
             const showHostIp = document.getElementById('checkHostIp').checked;
             const showCast = document.getElementById('checkCast').checked;
             const showPlayPause = document.getElementById('checkPlayPause').checked;
             
+            document.getElementById('seekContainer').classList.toggle('hidden', !showSeek);
             document.getElementById('mbit-link').classList.toggle('hidden', !showMbit);
             document.getElementById('mps-link').classList.toggle('hidden', !showM);
             document.getElementById('hostIpRow').classList.toggle('hidden', !showHostIp);
@@ -350,6 +471,7 @@
             bottomBar.classList.toggle('hidden', !showCast);
             document.body.style.paddingBottom = showCast ? '80px' : '20px';
             
+            localStorage.setItem('tinyDj_showSeek', showSeek);
             localStorage.setItem('tinyDj_showMbit', showMbit);
             localStorage.setItem('tinyDj_showM', showM);
             localStorage.setItem('tinyDj_showHostIp', showHostIp);
@@ -365,6 +487,7 @@
             localStorage.setItem('tinyDjHostIp', val);
             ipDisplay.innerText = `IP: ${val}`;
             updateLinks(val);
+            fetchStatus();
         }
 
         function updateLinks(ip) {
@@ -444,6 +567,9 @@
 
         function hitEndpoint(p) {
             const ip = hostIpInput.value.trim();
+            if (p === 'pause') {
+                suppressPollUntil = Date.now() + 4000;
+            }
             updateStatus(`${p.toUpperCase()}...`, "var(--cyan)");
             fetch(`http://${ip}:7979/${p}`, { mode: 'no-cors' })
                 .then(() => { updateStatus("SENT", "#00ff00"); setTimeout(() => updateStatus("Ready"), 1500); })
@@ -456,17 +582,24 @@
             ipDisplay.innerText = `IP: ${saved}`;
             updateLinks(saved);
 
+            const seekOn = localStorage.getItem('tinyDj_showSeek') !== 'false';
             const mbitOn = localStorage.getItem('tinyDj_showMbit') === 'true';
             const mOn = localStorage.getItem('tinyDj_showM') === 'true';
             const hostIpOn = localStorage.getItem('tinyDj_showHostIp') === 'true';
             const castOn = localStorage.getItem('tinyDj_showCast') === 'true';
             const playPauseOn = localStorage.getItem('tinyDj_showPlayPause') === 'true';
+            
+            document.getElementById('checkSeek').checked = seekOn;
             document.getElementById('checkMbit').checked = mbitOn;
             document.getElementById('checkM').checked = mOn;
             document.getElementById('checkHostIp').checked = hostIpOn;
             document.getElementById('checkCast').checked = castOn;
             document.getElementById('checkPlayPause').checked = playPauseOn;
             updateVisibility();
+
+            // Initial status check & poll every 5s
+            fetchStatus();
+            setInterval(fetchStatus, 5000);
         };
 
         document.addEventListener('keydown', (e) => {
