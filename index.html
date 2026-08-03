@@ -306,8 +306,8 @@
             <h1>CONTROLS</h1>
             <p id="ip-display" class="ip-text">IP: --.--.--.--</p>
             
-            <!-- SEEK SLIDER CONTAINER -->
-            <div id="seekContainer" class="seek-container">
+            <!-- SEEK SLIDER CONTAINER (Hidden by default until valid data) -->
+            <div id="seekContainer" class="seek-container hidden">
                 <input type="range" id="seekSlider" class="seek-slider" min="0" max="100" value="0" step="1">
                 <div class="seek-time">
                     <span id="currTime">00:00</span>
@@ -395,6 +395,10 @@
         let isDraggingSeek = false;
         let suppressPollUntil = 0;
 
+        // Data & live stream state tracking
+        let hasStatusData = false;
+        let isLiveStream = false;
+
         function formatTime(s) {
             if (isNaN(s) || s < 0) return "00:00";
             const mins = Math.floor(s / 60);
@@ -407,15 +411,30 @@
             return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }
 
+        function updateSeekContainerVisibility() {
+            const showSeekSetting = document.getElementById('checkSeek').checked;
+            // Only show seek container if enabled in settings, valid status data exists, and content is NOT live
+            const shouldShow = showSeekSetting && hasStatusData && !isLiveStream;
+            document.getElementById('seekContainer').classList.toggle('hidden', !shouldShow);
+        }
+
         async function fetchStatus() {
             if (Date.now() < suppressPollUntil || isDraggingSeek) return;
             const ip = hostIpInput.value.trim();
-            if (!ip || ip === "--.--.--.--") return;
+            if (!ip || ip === "--.--.--.--") {
+                hasStatusData = false;
+                updateSeekContainerVisibility();
+                return;
+            }
 
             try {
                 const res = await fetch(`http://${ip}:7979/status`);
                 if (res.ok) {
                     const data = await res.json();
+                    hasStatusData = true;
+                    isLiveStream = !!data.live;
+                    updateSeekContainerVisibility();
+
                     if (!isDraggingSeek) {
                         const duration = data.duration || 0;
                         const position = data.position || 0;
@@ -424,9 +443,14 @@
                         currTimeLabel.innerText = formatTime(position);
                         durTimeLabel.innerText = formatTime(duration);
                     }
+                } else {
+                    hasStatusData = false;
+                    updateSeekContainerVisibility();
                 }
             } catch(e) {
-                // Silently ignore status polling failures when player is idle
+                // Silently ignore status polling failures when player is idle/offline
+                hasStatusData = false;
+                updateSeekContainerVisibility();
             }
         }
 
@@ -461,7 +485,8 @@
             const showCast = document.getElementById('checkCast').checked;
             const showPlayPause = document.getElementById('checkPlayPause').checked;
             
-            document.getElementById('seekContainer').classList.toggle('hidden', !showSeek);
+            updateSeekContainerVisibility();
+
             document.getElementById('mbit-link').classList.toggle('hidden', !showMbit);
             document.getElementById('mps-link').classList.toggle('hidden', !showM);
             document.getElementById('hostIpRow').classList.toggle('hidden', !showHostIp);
