@@ -306,7 +306,7 @@
             <h1>CONTROLS</h1>
             <p id="ip-display" class="ip-text">IP: --.--.--.--</p>
             
-            <!-- SEEK SLIDER CONTAINER (Hidden by default until valid data) -->
+            <!-- SEEK SLIDER CONTAINER -->
             <div id="seekContainer" class="seek-container hidden">
                 <input type="range" id="seekSlider" class="seek-slider" min="0" max="100" value="0" step="1">
                 <div class="seek-time">
@@ -413,7 +413,6 @@
 
         function updateSeekContainerVisibility() {
             const showSeekSetting = document.getElementById('checkSeek').checked;
-            // Only show seek container if enabled in settings, valid status data exists, and content is NOT live
             const shouldShow = showSeekSetting && hasStatusData && !isLiveStream;
             document.getElementById('seekContainer').classList.toggle('hidden', !shouldShow);
         }
@@ -435,11 +434,31 @@
                     isLiveStream = !!data.live;
                     updateSeekContainerVisibility();
 
+                    // Update Play/Pause button text dynamically
+                    const playPauseBtn = document.getElementById('playPauseBtn');
+                    if (playPauseBtn && data.paused !== undefined) {
+                        playPauseBtn.innerText = data.paused ? "PLAY" : "PAUSE";
+                    }
+
+                    // Update UI status text if inactive
+                    const statusEl = document.getElementById('status');
+                    if (statusEl && (statusEl.innerText === "Ready" || statusEl.innerText === "SENT" || statusEl.innerText === "PLAYING" || statusEl.innerText === "PAUSED" || statusEl.innerText === "BUFFERING...")) {
+                        if (data.ready === 0) {
+                            updateStatus("BUFFERING...", "orange");
+                        } else if (data.paused) {
+                            updateStatus("PAUSED", "#888");
+                        } else {
+                            updateStatus("PLAYING", "#00ff00");
+                        }
+                    }
+
+                    // Update seek slider position & duration
                     if (!isDraggingSeek) {
-                        const duration = data.duration || 0;
-                        const position = data.position || 0;
+                        const duration = Math.floor(parseFloat(data.duration) || 0);
+                        const position = Math.floor(parseFloat(data.position) || 0);
+
                         seekSlider.max = Math.max(duration, 1);
-                        seekSlider.value = position;
+                        seekSlider.value = Math.min(position, seekSlider.max);
                         currTimeLabel.innerText = formatTime(position);
                         durTimeLabel.innerText = formatTime(duration);
                     }
@@ -448,7 +467,6 @@
                     updateSeekContainerVisibility();
                 }
             } catch(e) {
-                // Silently ignore status polling failures when player is idle/offline
                 hasStatusData = false;
                 updateSeekContainerVisibility();
             }
@@ -460,10 +478,19 @@
             currTimeLabel.innerText = formatTime(e.target.value);
         });
 
+        // Global drag release safeguards for touch/mouse
+        ['pointerup', 'touchend', 'mouseup'].forEach(evt => {
+            window.addEventListener(evt, () => {
+                if (isDraggingSeek) {
+                    setTimeout(() => { isDraggingSeek = false; }, 600);
+                }
+            });
+        });
+
         seekSlider.addEventListener('change', (e) => {
             const targetSec = Math.round(e.target.value);
             const ip = hostIpInput.value.trim();
-            suppressPollUntil = Date.now() + 4000;
+            suppressPollUntil = Date.now() + 5000;
             isDraggingSeek = false;
 
             if (!ip || ip === "--.--.--.--") return updateStatus("ERR: NO IP", "red");
@@ -472,7 +499,7 @@
             fetch(`http://${ip}:7979/seek/${targetSec}`, { mode: 'no-cors' })
                 .then(() => { 
                     updateStatus("SENT", "#00ff00"); 
-                    setTimeout(() => updateStatus("Ready"), 1500); 
+                    setTimeout(() => fetchStatus(), 1000); 
                 })
                 .catch(() => updateStatus("OFFLINE", "red"));
         });
