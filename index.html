@@ -11,7 +11,6 @@
             --bg: #0f0f0f; 
             --card-bg: #1a1a1a; 
         }
-
         body { 
             font-family: 'Segoe UI', sans-serif; 
             background: var(--bg); 
@@ -42,7 +41,6 @@
             z-index: 100; 
             border-bottom: 1px solid #222; 
         }
-
         .nav-group { 
             display: flex; 
             flex-wrap: wrap; 
@@ -50,7 +48,6 @@
             gap: 6px; 
             width: 100%;
         }
-
         .nav-btn { 
             background: #1a0026; 
             border: 1px solid var(--accent); 
@@ -68,7 +65,6 @@
             text-align: center;
             max-width: 80px;
         }
-
         .nav-btn:hover { background: var(--accent); color: #fff; }
         .hidden { display: none !important; }
 
@@ -292,15 +288,12 @@
     </div>
 
     <div class="card">
-        <div class="ascii-container">
-<pre class="ascii-header">
-   __  _                ____    _
-  / /_(_)___  __  __   / __ \  (_'
- / __/ / __ \/ / / /  / / / / / / 
-/ /_/ / / / / /_/ /  / /_/ / / /  
-\__/_/_/ /_/\__, /  /_____/_/ /   
-           /____/        /___/    
-</pre>
+        <div class="ascii-container"><pre class="ascii-header">   __  _                ____    _ 
+  / /_(_)___  __  __   / __ \  (_
+ / __/ / __ \/ / / /  / / / / / /
+/ /_/ / / / / /_/ /  / /_/ / / / 
+\__/_/_/ /_/\__, /  /_____/_/ /  
+           /____/        /___/   </pre>
         </div>
         <div class="main-display">
             <h1>CONTROLS</h1>
@@ -331,10 +324,10 @@
             <h3 style="margin-top:0; color:var(--cyan)">SETTINGS</h3>
             
             <label>WiFi SSID</label>
-            <input type="text" id="ssid" placeholder="Network Name">
+            <input type="text" id="ssid" placeholder="Network Name" value="Jellicoiet">
             
             <label>WiFi Passphrase</label>
-            <input type="password" id="pass" placeholder="••••••••">
+            <input type="password" id="pass" placeholder="••••••••" value="qwertyui">
             
             <div id="hostIpRow">
                 <label>Host IP</label>
@@ -389,13 +382,8 @@
         const CHAR_PASS_UUID = '12345678-1234-5678-1234-56789abcdef3';
 
         let activeDevice = null;
-        const spinnerFrames = ['-', '\\', '|', '/'];
-        let spinIdx = 0;
-
         let isDraggingSeek = false;
         let suppressPollUntil = 0;
-
-        // Data & live stream state tracking
         let hasStatusData = false;
         let isLiveStream = false;
 
@@ -434,13 +422,11 @@
                     isLiveStream = !!data.live;
                     updateSeekContainerVisibility();
 
-                    // Update Play/Pause button text dynamically
                     const playPauseBtn = document.getElementById('playPauseBtn');
                     if (playPauseBtn && data.paused !== undefined) {
                         playPauseBtn.innerText = data.paused ? "PLAY" : "PAUSE";
                     }
 
-                    // Update UI status text if inactive
                     const statusEl = document.getElementById('status');
                     if (statusEl && (statusEl.innerText === "Ready" || statusEl.innerText === "SENT" || statusEl.innerText === "PLAYING" || statusEl.innerText === "PAUSED" || statusEl.innerText === "BUFFERING...")) {
                         if (data.ready === 0) {
@@ -452,7 +438,6 @@
                         }
                     }
 
-                    // Update seek slider position & duration
                     if (!isDraggingSeek) {
                         const duration = Math.floor(parseFloat(data.duration) || 0);
                         const position = Math.floor(parseFloat(data.position) || 0);
@@ -472,13 +457,11 @@
             }
         }
 
-        // Seek slider events
         seekSlider.addEventListener('input', (e) => {
             isDraggingSeek = true;
             currTimeLabel.innerText = formatTime(e.target.value);
         });
 
-        // Global drag release safeguards for touch/mouse
         ['pointerup', 'touchend', 'mouseup'].forEach(evt => {
             window.addEventListener(evt, () => {
                 if (isDraggingSeek) {
@@ -554,57 +537,65 @@
             }
         }
 
-        async function getBleService() {
-            if (activeDevice && activeDevice.gatt.connected) return await activeDevice.gatt.getPrimaryService(SERVICE_UUID);
-            activeDevice = await navigator.bluetooth.requestDevice({ 
-                filters: [{ namePrefix: 'tinyDJ' }], 
-                optionalServices: [SERVICE_UUID] 
+        /* --- SIMPLIFIED BLUETOOTH FUNCTIONS --- */
+        async function getService() {
+            if (activeDevice && activeDevice.gatt.connected) {
+                return activeDevice.gatt.getPrimaryService(SERVICE_UUID);
+            }
+            activeDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ services: [SERVICE_UUID] }]
             });
             const server = await activeDevice.gatt.connect();
-            return await server.getPrimaryService(SERVICE_UUID);
+            return server.getPrimaryService(SERVICE_UUID);
         }
 
         async function oneClickSync() {
             const ssid = document.getElementById('ssid').value;
             const pass = document.getElementById('pass').value;
+            
             if(!ssid || !pass) return updateStatus("SSID/PASS REQ", "red");
+
             try {
-                const service = await getBleService();
-                updateStatus("Syncing...");
+                updateStatus("Connecting to device...", "var(--cyan)");
+                syncBtn.innerText = "CONNECTING...";
+
+                const service = await getService();
                 const enc = new TextEncoder();
+
                 await (await service.getCharacteristic(CHAR_SSID_UUID)).writeValue(enc.encode(ssid));
                 await (await service.getCharacteristic(CHAR_PASS_UUID)).writeValue(enc.encode(pass));
-                let count = 12;
-                const interval = setInterval(() => {
-                    syncBtn.innerText = `${spinnerFrames[spinIdx]} CONNECTING ${count}s`;
-                    spinIdx = (spinIdx + 1) % 4;
-                    if (count <= 0) {
-                        clearInterval(interval);
-                        keepTryingFetch(service);
-                    }
-                    count--;
-                }, 1000);
-            } catch (e) { updateStatus("BLE ERROR", "red"); }
-        }
 
-        async function keepTryingFetch(service) {
-            syncBtn.innerText = "WAITING FOR IP...";
-            const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
-            const check = async () => {
-                try {
-                    const buf = await ipChar.readValue();
-                    const ip = new TextDecoder().decode(buf);
-                    if (ip.includes('.') && !ip.toLowerCase().includes('connecting')) {
+                updateStatus("Waiting for IP...", "var(--cyan)");
+                syncBtn.innerText = "WAITING FOR IP...";
+
+                const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
+
+                while (true) {
+                    const value = await ipChar.readValue();
+                    const ip = new TextDecoder().decode(value);
+
+                    if (ip.includes(".") && !ip.toLowerCase().includes("connecting")) {
                         manualIpChange(ip);
                         hostIpInput.value = ip;
                         syncBtn.innerText = "✓ CONNECTED";
                         syncBtn.classList.add('btn-success');
-                        updateStatus("SUCCESS", "var(--cyan)");
-                        setTimeout(() => { toggleModal(); syncBtn.classList.remove('btn-success'); syncBtn.innerText="Sync WiFi & Get IP"; updateStatus("Ready"); }, 2000);
-                    } else { setTimeout(check, 2000); }
-                } catch(e) { setTimeout(check, 2000); }
-            };
-            check();
+                        updateStatus("Connected: " + ip, "#00ff00");
+
+                        setTimeout(() => {
+                            toggleModal();
+                            syncBtn.classList.remove('btn-success');
+                            syncBtn.innerText = "Sync WiFi & Get IP";
+                            updateStatus("Ready");
+                        }, 1500);
+                        break;
+                    }
+
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            } catch (e) {
+                updateStatus("BLE ERROR", "red");
+                syncBtn.innerText = "Sync WiFi & Get IP";
+            }
         }
 
         function handleCast() {
@@ -649,7 +640,6 @@
             document.getElementById('checkPlayPause').checked = playPauseOn;
             updateVisibility();
 
-            // Initial status check & poll every 5s
             fetchStatus();
             setInterval(fetchStatus, 5000);
         };
@@ -661,8 +651,14 @@
             if (e.key === 'ArrowRight') hitEndpoint('ui/next');
             if (e.code === 'Space') { e.preventDefault(); hitEndpoint('pause'); }
         });
+
         castUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleCast(); });
-        function updateStatus(msg, color = "#555") { const s = document.getElementById('status'); s.innerText = msg; s.style.color = color; }
+
+        function updateStatus(msg, color = "#555") { 
+            const s = document.getElementById('status'); 
+            s.innerText = msg; 
+            s.style.color = color; 
+        }
     </script>
 </body>
 </html>
