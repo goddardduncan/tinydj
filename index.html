@@ -316,8 +316,7 @@
             <button class="ctrl-btn hidden" id="playPauseBtn" onclick="hitEndpoint('pause')">PLAY/PAUSE</button>
             <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
         </div>
-        <button class="ctrl-btn" style="width: 100%; margin-bottom: 12px;" onclick="hitEndpoint('cec_tv_off')">TV OFF</button>
-        
+        <button class="ctrl-btn" id="tvBtn" style="width: 100%; margin-bottom: 12px;" onclick="tvButton()">TV OFF</button>
         <div id="status">READY</div>
     </div>
 
@@ -386,6 +385,7 @@
         let activeDevice = null;
         let isDraggingSeek = false;
         let suppressPollUntil = 0;
+        let tvIsOn = true;
         let hasStatusData = false;
         let isLiveStream = false;
 
@@ -423,6 +423,14 @@
                     hasStatusData = true;
                     isLiveStream = !!data.live;
                     updateSeekContainerVisibility();
+
+                    // The player's belief from CEC: off shows TV ON, which
+                    // wakes the television on this box's input.
+                    if (typeof data.tv_on === 'boolean') {
+                        tvIsOn = data.tv_on;
+                        const tvBtn = document.getElementById('tvBtn');
+                        if (tvBtn) tvBtn.innerText = tvIsOn ? "TV OFF" : "TV ON";
+                    }
 
                     const playPauseBtn = document.getElementById('playPauseBtn');
                     if (playPauseBtn && data.paused !== undefined) {
@@ -608,6 +616,15 @@
             fetch(`http://${ip}:7979/${encodeURIComponent(url)}`, { mode: 'no-cors' })
                 .then(() => { updateStatus("CAST SENT", "#00ff00"); castUrlInput.value = ""; setTimeout(() => updateStatus("Ready"), 2000); })
                 .catch(() => updateStatus("FAILED", "red"));
+        }
+
+        // TV OFF puts the television in standby; TV ON wakes it on input 4,
+        // where the box is plugged in.
+        function tvButton() {
+            hitEndpoint(tvIsOn ? 'cec_tv_off' : 'cec_input4');
+            tvIsOn = !tvIsOn;
+            const tvBtn = document.getElementById('tvBtn');
+            if (tvBtn) tvBtn.innerText = tvIsOn ? "TV OFF" : "TV ON";
         }
 
         function hitEndpoint(p) {
