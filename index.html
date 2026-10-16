@@ -110,7 +110,7 @@
             position: relative; 
         }
         
-        .ascii-container { display: flex; justify-content: center; width: 100%; margin-bottom: 20px; }
+        .ascii-container { display: flex; justify-content: center; width: 100%; margin-bottom: 20px; cursor: pointer; user-select: none; }
         .ascii-header { 
             margin: 0; 
             font-family: monospace; 
@@ -288,11 +288,12 @@
     </div>
 
     <div class="card">
-        <div class="ascii-container"><pre class="ascii-header">   __  _                ____    _ 
-  / /_(_)___  __  __   / __ \  (_)
- / __/ / __ \/ / / /  / / / / / /
-/ /_/ / / / / /_/ /  / /_/ / / / 
-\__/_/_/ /_/\__, /  /_____/_/ /  
+        <div class="ascii-container" id="asciiContainer" title="Double tap for nerd stats">
+            <pre class="ascii-header">    __  _                 ____    _ 
+  / /_(_)___  __  __   / __ \   (_)
+ / __/ / __ \/ / / /  / / / / / / 
+/ /_/ / / / / /_/ /  / /_/ / / /  
+\__/_/_/ /_/\__, /  /_____/_/ /   
            /____/        /___/   </pre>
         </div>
         <div class="main-display">
@@ -376,6 +377,7 @@
         const seekSlider = document.getElementById('seekSlider');
         const currTimeLabel = document.getElementById('currTime');
         const durTimeLabel = document.getElementById('durTime');
+        const asciiContainer = document.getElementById('asciiContainer');
         
         const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
         const CHAR_IP_UUID = '12345678-1234-5678-1234-56789abcdef1';
@@ -388,6 +390,18 @@
         let tvIsOn = true;
         let hasStatusData = false;
         let isLiveStream = false;
+        let lastAsciiClickTime = 0;
+
+        // Double tap / double click listener for ASCII art
+        asciiContainer.addEventListener('click', () => {
+            const currentTime = Date.now();
+            if (currentTime - lastAsciiClickTime < 300) {
+                hitEndpoint('key/nerd');
+                lastAsciiClickTime = 0;
+            } else {
+                lastAsciiClickTime = currentTime;
+            }
+        });
 
         function formatTime(s) {
             if (isNaN(s) || s < 0) return "00:00";
@@ -424,8 +438,6 @@
                     isLiveStream = !!data.live;
                     updateSeekContainerVisibility();
 
-                    // The player's belief from CEC: off shows TV ON, which
-                    // wakes the television on this box's input.
                     if (typeof data.tv_on === 'boolean') {
                         tvIsOn = data.tv_on;
                         const tvBtn = document.getElementById('tvBtn');
@@ -618,8 +630,6 @@
                 .catch(() => updateStatus("FAILED", "red"));
         }
 
-        // TV OFF puts the television in standby; TV ON wakes it on input 4,
-        // where the box is plugged in.
         function tvButton() {
             hitEndpoint(tvIsOn ? 'cec_tv_off' : 'cec_input4');
             tvIsOn = !tvIsOn;
