@@ -279,22 +279,18 @@
             <a id="list-link" href="#" target="_blank" class="nav-btn">LIST</a>
             <a id="bit-link" href="#" target="_blank" class="nav-btn">BIT</a>
             <a id="box-link" href="#" target="_blank" class="nav-btn">BOX</a> 
-            <a id="ps-link" href="#" target="_blank" class="nav-btn">PSEARCH</a>
-            <a id="tf-link" href="#" target="_blank" class="nav-btn">TF</a>
-            <a id="mps-link" href="#" target="_blank" class="nav-btn">M</a>
-            <a id="mbit-link" href="#" target="_blank" class="nav-btn">M-BIT</a>
         </div>
         <button class="settings-trigger" onclick="toggleModal()">SETTINGS</button>
     </div>
 
     <div class="card">
         <div class="ascii-container" id="asciiContainer" title="Double tap for nerd stats">
-            <pre class="ascii-header">   __  _                ____    _ 
-  / /_(_)___  __  __   / __ \  (_)
- / __/ / __ \/ / / /  / / / / / / 
+            <pre class="ascii-header">    __  _         ____    _ 
+ / /_(_)___  __  __   / __ \  (_)
+/ __/ / __ \/ / / /  / / / / / / 
 / /_/ / / / / /_/ /  / /_/ / / /  
 \__/_/_/ /_/\__, /  /_____/_/ /   
-           /____/        /___/   </pre>
+           /____/         /___/   </pre>
         </div>
         <div class="main-display">
             <h1>CONTROLS</h1>
@@ -340,12 +336,6 @@
             <div class="toggle-grid">
                 <div class="toggle-item">
                     <input type="checkbox" id="checkSeek" onchange="updateVisibility()"> <span>SEEK BAR</span>
-                </div>
-                <div class="toggle-item">
-                    <input type="checkbox" id="checkMbit" onchange="updateVisibility()"> <span>M-BIT</span>
-                </div>
-                <div class="toggle-item">
-                    <input type="checkbox" id="checkM" onchange="updateVisibility()"> <span>M</span>
                 </div>
                 <div class="toggle-item">
                     <input type="checkbox" id="checkHostIp" onchange="updateVisibility()"> <span>HOST IP</span>
@@ -511,16 +501,12 @@
 
         function updateVisibility() {
             const showSeek = document.getElementById('checkSeek').checked;
-            const showMbit = document.getElementById('checkMbit').checked;
-            const showM = document.getElementById('checkM').checked;
             const showHostIp = document.getElementById('checkHostIp').checked;
             const showCast = document.getElementById('checkCast').checked;
             const showPlayPause = document.getElementById('checkPlayPause').checked;
             
             updateSeekContainerVisibility();
 
-            document.getElementById('mbit-link').classList.toggle('hidden', !showMbit);
-            document.getElementById('mps-link').classList.toggle('hidden', !showM);
             document.getElementById('hostIpRow').classList.toggle('hidden', !showHostIp);
             document.getElementById('playPauseBtn').classList.toggle('hidden', !showPlayPause);
 
@@ -529,8 +515,6 @@
             document.body.style.paddingBottom = showCast ? '80px' : '20px';
             
             localStorage.setItem('tinyDj_showSeek', showSeek);
-            localStorage.setItem('tinyDj_showMbit', showMbit);
-            localStorage.setItem('tinyDj_showM', showM);
             localStorage.setItem('tinyDj_showHostIp', showHostIp);
             localStorage.setItem('tinyDj_showCast', showCast);
             localStorage.setItem('tinyDj_showPlayPause', showPlayPause);
@@ -549,13 +533,9 @@
 
         function updateLinks(ip) {
             if (ip && ip.includes('.')) {
-                document.getElementById('tf-link').href = `http://${ip}:8311`;
                 document.getElementById('box-link').href = `http://${ip}:8303`;
                 document.getElementById('list-link').href = `http://${ip}:8222`;
                 document.getElementById('bit-link').href = `http://${ip}:3030`;
-                document.getElementById('ps-link').href = `http://${ip}:5010`;
-                document.getElementById('mps-link').href = `http://${ip}:5071`;
-                document.getElementById('mbit-link').href = `http://${ip}:3040`;
             }
         }
 
@@ -662,15 +642,11 @@
             updateLinks(saved);
 
             const seekOn = localStorage.getItem('tinyDj_showSeek') !== 'false';
-            const mbitOn = localStorage.getItem('tinyDj_showMbit') === 'true';
-            const mOn = localStorage.getItem('tinyDj_showM') === 'true';
             const hostIpOn = localStorage.getItem('tinyDj_showHostIp') === 'true';
             const castOn = localStorage.getItem('tinyDj_showCast') === 'true';
             const playPauseOn = localStorage.getItem('tinyDj_showPlayPause') === 'true';
             
             document.getElementById('checkSeek').checked = seekOn;
-            document.getElementById('checkMbit').checked = mbitOn;
-            document.getElementById('checkM').checked = mOn;
             document.getElementById('checkHostIp').checked = hostIpOn;
             document.getElementById('checkCast').checked = castOn;
             document.getElementById('checkPlayPause').checked = playPauseOn;
