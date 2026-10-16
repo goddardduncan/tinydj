@@ -642,8 +642,15 @@
             if (p === 'pause') {
                 suppressPollUntil = Date.now() + 4000;
             }
+            
+            // Send POST for key/nerd endpoints, GET for others
+            const options = { mode: 'no-cors' };
+            if (p === 'key/nerd') {
+                options.method = 'POST';
+            }
+
             updateStatus(`${p.toUpperCase()}...`, "var(--cyan)");
-            fetch(`http://${ip}:7979/${p}`, { mode: 'no-cors' })
+            fetch(`http://${ip}:7979/${p}`, options)
                 .then(() => { updateStatus("SENT", "#00ff00"); setTimeout(() => updateStatus("Ready"), 1500); })
                 .catch(() => updateStatus("OFFLINE", "red"));
         }
