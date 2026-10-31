@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tinyDJ Remote</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..900&display=swap">
+    <style>
+        /* made-this tokens */
+        :root {
+            color-scheme: light dark;
+            --mt-font: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            --mt-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+            --mt-badge-pill: #111111;
+            --mt-badge-ring: #ffffff;
+            --mt-badge-text: #ffffff;
+            --mt-paper: #f0f2f5;
+            --mt-surface: #ffffff;
+            --mt-ink: #111111;
+            --mt-ink-2: #333333;
+            --mt-muted: #5d636b;
+            --mt-rule: #d5d9df;
+            --mt-blue: #0a5fb4;
+            --mt-ok: #0a5fb4;
+            --mt-warn: #8f5f00;
+            --mt-bad: #c0245c;
+            --mt-radius: 10px;
+            --mt-shadow: 0 1px 2px rgba(0,0,0,.08), 0 4px 14px rgba(0,0,0,.06);
+            /* tinyDJ's own colours, deepened on light paper so they read */
+            --dj-purple: #9a00d6;
+            --dj-cyan: #008fa3;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --dj-purple: #bf00ff; --dj-cyan: #00d6d6;
+                --mt-paper: #0e0f11; --mt-surface: #17191c; --mt-ink: #f5f6f7; --mt-ink-2: #d6d9dd;
+                --mt-muted: #9aa1aa; --mt-rule: #2b2f35; --mt-blue: #62a8f2;
+                --mt-ok: #62a8f2; --mt-warn: #f2b13c; --mt-bad: #ff6b8e;
+                --mt-shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+            }
+        }
+        :root[data-theme="dark"] {
+            --dj-purple: #bf00ff; --dj-cyan: #00d6d6;
+            --mt-paper: #0e0f11; --mt-surface: #17191c; --mt-ink: #f5f6f7; --mt-ink-2: #d6d9dd;
+            --mt-muted: #9aa1aa; --mt-rule: #2b2f35; --mt-blue: #62a8f2;
+            --mt-ok: #62a8f2; --mt-warn: #f2b13c; --mt-bad: #ff6b8e;
+            --mt-shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+        }
+
+        *, ::before, ::after { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--mt-paper);
+            color: var(--mt-ink-2);
+            font: 400 16px/1.45 var(--mt-font);
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding: 96px 16px 80px;
+            transition: padding-bottom 0.2s ease;
+        }
+        :focus-visible { outline: 2px solid var(--mt-ink); outline-offset: 2px; border-radius: 4px; }
+        .hidden { display: none !important; }
+
+        /* --- NAVIGATION BARS --- */
+        .top-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: color-mix(in srgb, var(--mt-paper) 88%, transparent);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            border-bottom: 1px solid var(--mt-rule);
+        }
+        .nav-group { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+        .nav-btn {
+            display: block;
+            min-width: 88px;
+            padding: 11px 22px 12px;
+            border-radius: 999px;
+            background: var(--dj-purple);
+            color: #fff;
+            font: 700 15px/1 var(--mt-font);
+            text-align: center;
+            text-decoration: none;
+            transition: opacity 0.15s;
+        }
+        .nav-btn:hover { opacity: 0.85; }
+
+        .card-foot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 14px;
+        }
+        .settings-trigger {
+            padding: 6px 8px;
+            margin-right: -8px;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--mt-muted);
+            font: 600 13px/1 var(--mt-font);
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        .settings-trigger:hover { color: var(--mt-ink); }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: color-mix(in srgb, var(--mt-paper) 88%, transparent);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+            display: flex;
+            align-items: center;
+            z-index: 100;
+            border-top: 1px solid var(--mt-rule);
+            gap: 10px;
+        }
+        .bottom-bar label { margin: 0; }
+
+        /* --- MAIN CARD --- */
+        .card {
+            width: 100%;
+            max-width: 400px;
+            padding: 28px 22px 20px;
+            border-radius: 18px;
+            border: 1px solid var(--mt-rule);
+            background: var(--mt-surface);
+            position: relative;
+        }
+
+        .ascii-container { display: flex; justify-content: center; width: 100%; margin-bottom: 18px; cursor: pointer; user-select: none; }
+        .ascii-header {
+            margin: 0;
+            font-family: var(--mt-mono);
+            font-size: 11px;
+            line-height: 1.15;
+            font-weight: 800;
+            text-align: left;
+            white-space: pre;
+            background: linear-gradient(to right, var(--dj-purple), var(--dj-cyan));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .main-display { margin-bottom: 18px; text-align: center; }
+        .main-display h1 {
+            color: var(--mt-ink);
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1;
+            margin: 0;
+        }
+        .ip-text {
+            color: var(--mt-muted);
+            font-size: 14px;
+            font-variant-numeric: tabular-nums;
+            margin: 8px 0 12px;
+        }
+
+        /* --- SEEK SLIDER STYLES --- */
+        .seek-container { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 4px; }
+        .seek-time {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-variant-numeric: tabular-nums;
+            color: var(--mt-muted);
+        }
+        .seek-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--mt-rule);
+            outline: none;
+            cursor: pointer;
+            margin: 8px 0;
+        }
+        .seek-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: var(--dj-purple);
+            border: 3px solid var(--mt-surface);
+            cursor: pointer;
+        }
+        .seek-slider::-moz-range-thumb {
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: var(--dj-purple);
+            border: 3px solid var(--mt-surface);
+            cursor: pointer;
+        }
+
+        .nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+
+        .ctrl-btn {
+            background: var(--mt-ink);
+            color: var(--mt-paper);
+            border: 0;
+            padding: 22px 8px;
+            border-radius: 18px;
+            font: 600 15px/1 var(--mt-font);
+            letter-spacing: 0;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .ctrl-btn:active { background: var(--dj-purple); color: #fff; }
+        .ctrl-btn.is-quiet {
+            background: transparent;
+            border: 1.5px solid var(--mt-rule);
+            color: var(--mt-ink);
+        }
+        .ctrl-btn.is-quiet:hover { border-color: var(--mt-ink); }
+        #playPauseBtn.hidden + .ctrl-btn { grid-column: 1 / -1; }
+        .tv-btn { width: 100%; margin-bottom: 4px; }
+
+        .action-btn {
+            background: var(--mt-ink);
+            color: var(--mt-paper);
+            border: 0;
+            padding: 16px;
+            border-radius: 12px;
+            font: 700 15px/1 var(--mt-font);
+            letter-spacing: -0.02em;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 6px;
+            transition: transform 0.15s, background 0.2s;
+        }
+        .action-btn:hover { transform: translateY(-1px); }
+        .btn-success { background: var(--mt-ok) !important; color: #fff !important; }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: color-mix(in srgb, var(--mt-paper) 70%, transparent);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+            z-index: 1000;
+        }
+        .modal-open { display: flex; }
+        .modal {
+            background: var(--mt-surface);
+            width: 100%;
+            max-width: 360px;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+            padding: 24px 22px;
+            border-radius: 18px;
+            border: 1px solid var(--mt-rule);
+        }
+        .modal h2 {
+            color: var(--mt-ink);
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: -0.045em;
+            line-height: 1;
+            margin: 0 0 18px;
+        }
+
+        label { display: block; font-size: 13px; margin-bottom: 6px; color: var(--mt-muted); font-weight: 600; }
+        input:not([type="range"]):not([type="checkbox"]) {
+            width: 100%;
+            padding: 11px 12px;
+            background: var(--mt-surface);
+            border: 1px solid var(--mt-rule);
+            border-radius: 10px;
+            color: var(--mt-ink);
+            font: 400 15px/1.2 var(--mt-font);
+            outline: none;
+            margin-bottom: 14px;
+        }
+        input:not([type="range"]):not([type="checkbox"]):focus { border-color: var(--mt-ink); }
+
+        /* --- TOGGLE VISIBILITY GRID --- */
+        .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--mt-paper);
+            border: 1px solid var(--mt-rule);
+            border-radius: 12px;
+            padding: 10px 12px;
+            min-width: 0;
+            margin: 0;
+            color: var(--mt-ink);
+            cursor: pointer;
+        }
+        .toggle-item:hover { border-color: var(--mt-ink); }
+        .toggle-item input[type="checkbox"] { flex-shrink: 0; margin: 0; cursor: pointer; accent-color: var(--mt-ink); }
+        .toggle-item span {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--mt-muted);
+        }
+        #status::before {
+            content: "";
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            flex-shrink: 0;
+        }
+        #status.is-ok { color: var(--mt-ok); }
+        #status.is-warn { color: var(--mt-warn); }
+        #status.is-bad { color: var(--mt-bad); }
+        #status.is-busy { color: var(--mt-ink); }
+
+        .cast-input { flex-grow: 1; margin-bottom: 0 !important; }
+        .cast-send {
+            background: var(--mt-ink);
+            color: var(--mt-paper);
+            border: 0;
+            padding: 11px 16px;
+            border-radius: 10px;
+            font: 700 14px/1 var(--mt-font);
+            letter-spacing: -0.02em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="nav-group">
+            <a id="bit-link" href="#" target="_blank" class="nav-btn">Bit</a>
+            <a id="box-link" href="#" target="_blank" class="nav-btn">Box</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="ascii-container" id="asciiContainer" title="Double tap for nerd stats">
+            <pre class="ascii-header">
+   __  _                ____    _
+  / /_(_)___  __  __   / __ \  (_)
+ / __/ / __ \/ / / /  / / / / / /
+/ /_/ / / / / /_/ /  / /_/ / / /
+\__/_/_/ /_/\__, /  /_____/_/ /
+           /____/        /___/   </pre>
+        </div>
+        <div class="main-display">
+            <h1>Controls</h1>
+            <p id="ip-display" class="ip-text">IP: --.--.--.--</p>
+
+            <div id="seekContainer" class="seek-container hidden">
+                <input type="range" id="seekSlider" class="seek-slider" min="0" max="100" value="0" step="1">
+                <div class="seek-time">
+                    <span id="currTime">00:00</span>
+                    <span id="durTime">00:00</span>
+                </div>
+            </div>
+        </div>
+        <div class="nav-grid">
+            <button class="ctrl-btn" onclick="hitEndpoint('ui/prev')">Prev</button>
+            <button class="ctrl-btn" onclick="hitEndpoint('ui/next')">Next</button>
+        </div>
+        <div class="nav-grid">
+            <button class="ctrl-btn hidden" id="playPauseBtn" onclick="hitEndpoint('pause')">Play/Pause</button>
+            <button class="ctrl-btn" onclick="hitEndpoint('epg')">EPG</button>
+        </div>
+        <button class="ctrl-btn is-quiet tv-btn" id="tvBtn" onclick="tvButton()">TV off</button>
+        <div class="card-foot">
+            <div id="status">Ready</div>
+            <button class="settings-trigger" onclick="toggleModal()">Settings</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h2>Settings</h2>
+
+            <label for="ssid">WiFi SSID</label>
+            <input type="text" id="ssid" placeholder="Network Name" value="Jellicoiet">
+
+            <label for="pass">WiFi passphrase</label>
+            <input type="password" id="pass" placeholder="••••••••" value="qwertyui">
+
+            <div id="hostIpRow">
+                <label for="hostIp">Host IP</label>
+                <input type="text" id="hostIp" placeholder="tinydj.local" onchange="manualIpChange(this.value)">
+            </div>
+
+            <label>Show on remote</label>
+            <div class="toggle-grid">
+                <label class="toggle-item">
+                    <input type="checkbox" id="checkSeek" onchange="updateVisibility()"> <span>Seek bar</span>
+                </label>
+                <label class="toggle-item">
+                    <input type="checkbox" id="checkHostIp" onchange="updateVisibility()"> <span>Host IP</span>
+                </label>
+                <label class="toggle-item">
+                    <input type="checkbox" id="checkCast" onchange="updateVisibility()"> <span>Cast URL</span>
+                </label>
+            </div>
+
+            <button class="action-btn" id="syncBtn" onclick="oneClickSync()">Sync WiFi & get IP</button>
+            <button class="ctrl-btn is-quiet" style="width: 100%; margin-top: 10px; padding: 14px; font-size: 15px;" onclick="toggleModal()">Close</button>
+        </div>
+    </div>
+
+    <div class="bottom-bar hidden" id="bottomBar">
+        <label for="castUrl">Cast</label>
+        <input type="text" id="castUrl" class="cast-input" placeholder="Paste URL and press Enter…">
+        <button class="cast-send" onclick="handleCast()">Send</button>
+    </div>
+
+    <script>
+        const hostIpInput = document.getElementById('hostIp');
+        const ipDisplay = document.getElementById('ip-display');
+        const syncBtn = document.getElementById('syncBtn');
+        const castUrlInput = document.getElementById('castUrl');
+        const seekSlider = document.getElementById('seekSlider');
+        const currTimeLabel = document.getElementById('currTime');
+        const durTimeLabel = document.getElementById('durTime');
+        const asciiContainer = document.getElementById('asciiContainer');
+
+        const SERVICE_UUID = '12345678-1234-5678-1234-56789abcdef0';
+        const CHAR_IP_UUID = '12345678-1234-5678-1234-56789abcdef1';
+        const CHAR_SSID_UUID = '12345678-1234-5678-1234-56789abcdef2';
+        const CHAR_PASS_UUID = '12345678-1234-5678-1234-56789abcdef3';
+
+        let activeDevice = null;
+        let isDraggingSeek = false;
+        let suppressPollUntil = 0;
+        let tvIsOn = true;
+        let hasStatusData = false;
+        let isLiveStream = false;
+        let isPaused = false;
+        let lastAsciiClickTime = 0;
+
+        // Double tap / double click listener for ASCII art
+        asciiContainer.addEventListener('click', () => {
+            const currentTime = Date.now();
+            if (currentTime - lastAsciiClickTime < 300) {
+                hitEndpoint('key/nerd');
+                lastAsciiClickTime = 0;
+            } else {
+                lastAsciiClickTime = currentTime;
+            }
+        });
+
+        function formatTime(s) {
+            if (isNaN(s) || s < 0) return "00:00";
+            const mins = Math.floor(s / 60);
+            const secs = Math.floor(s % 60);
+            const hrs = Math.floor(mins / 60);
+            const remMins = mins % 60;
+            if (hrs > 0) {
+                return `${hrs}:${remMins < 10 ? '0' : ''}${remMins}:${secs < 10 ? '0' : ''}${secs}`;
+            }
+            return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function updateSeekContainerVisibility() {
+            const showSeekSetting = document.getElementById('checkSeek').checked;
+            const shouldShow = showSeekSetting && hasStatusData && !isLiveStream;
+            document.getElementById('seekContainer').classList.toggle('hidden', !shouldShow);
+            updatePlayPauseVisibility();
+        }
+
+        // Play/Pause shows for streams with a length, and whenever paused so
+        // a paused live stream can always be resumed.
+        function updatePlayPauseVisibility() {
+            const shouldShow = hasStatusData && (!isLiveStream || isPaused);
+            document.getElementById('playPauseBtn').classList.toggle('hidden', !shouldShow);
+        }
+
+        async function fetchStatus() {
+            if (Date.now() < suppressPollUntil || isDraggingSeek) return;
+            const ip = hostIpInput.value.trim();
+            if (!ip || ip === "--.--.--.--") {
+                hasStatusData = false;
+                updateSeekContainerVisibility();
+                return;
+            }
+
+            try {
+                const res = await fetch(`http://${ip}:7979/status`);
+                if (res.ok) {
+                    const data = await res.json();
+                    hasStatusData = true;
+                    isLiveStream = !!data.live;
+                    isPaused = !!data.paused;
+                    updateSeekContainerVisibility();
+
+                    if (typeof data.tv_on === 'boolean') {
+                        tvIsOn = data.tv_on;
+                        const tvBtn = document.getElementById('tvBtn');
+                        if (tvBtn) tvBtn.innerText = tvIsOn ? "TV off" : "TV on";
+                    }
+
+                    const playPauseBtn = document.getElementById('playPauseBtn');
+                    if (playPauseBtn && data.paused !== undefined) {
+                        playPauseBtn.innerText = data.paused ? "Play" : "Pause";
+                    }
+
+                    const statusEl = document.getElementById('status');
+                    if (statusEl && ["Ready", "Sent", "Playing", "Paused", "Buffering…"].includes(statusEl.innerText)) {
+                        if (data.ready === 0) {
+                            updateStatus("Buffering…", "warn");
+                        } else if (data.paused) {
+                            updateStatus("Paused");
+                        } else {
+                            updateStatus("Playing", "ok");
+                        }
+                    }
+
+                    if (!isDraggingSeek) {
+                        const duration = Math.floor(parseFloat(data.duration) || 0);
+                        const position = Math.floor(parseFloat(data.position) || 0);
+
+                        seekSlider.max = Math.max(duration, 1);
+                        seekSlider.value = Math.min(position, seekSlider.max);
+                        currTimeLabel.innerText = formatTime(position);
+                        durTimeLabel.innerText = formatTime(duration);
+                    }
+                } else {
+                    hasStatusData = false;
+                    updateSeekContainerVisibility();
+                }
+            } catch(e) {
+                hasStatusData = false;
+                updateSeekContainerVisibility();
+            }
+        }
+
+        seekSlider.addEventListener('input', (e) => {
+            isDraggingSeek = true;
+            currTimeLabel.innerText = formatTime(e.target.value);
+        });
+
+        ['pointerup', 'touchend', 'mouseup'].forEach(evt => {
+            window.addEventListener(evt, () => {
+                if (isDraggingSeek) {
+                    setTimeout(() => { isDraggingSeek = false; }, 600);
+                }
+            });
+        });
+
+        seekSlider.addEventListener('change', (e) => {
+            const targetSec = Math.round(e.target.value);
+            const ip = hostIpInput.value.trim();
+            suppressPollUntil = Date.now() + 5000;
+            isDraggingSeek = false;
+
+            if (!ip || ip === "--.--.--.--") return updateStatus("No IP set", "bad");
+
+            updateStatus(`Seeking to ${formatTime(targetSec)}…`, "busy");
+            fetch(`http://${ip}:7979/seek/${targetSec}`, { mode: 'no-cors' })
+                .then(() => {
+                    updateStatus("Sent", "ok");
+                    setTimeout(() => fetchStatus(), 1000);
+                })
+                .catch(() => updateStatus("Offline", "bad"));
+        });
+
+        function updateVisibility() {
+            const showSeek = document.getElementById('checkSeek').checked;
+            const showHostIp = document.getElementById('checkHostIp').checked;
+            const showCast = document.getElementById('checkCast').checked;
+
+            updateSeekContainerVisibility();
+
+            document.getElementById('hostIpRow').classList.toggle('hidden', !showHostIp);
+
+            const bottomBar = document.getElementById('bottomBar');
+            bottomBar.classList.toggle('hidden', !showCast);
+            document.body.style.paddingBottom = showCast ? '80px' : '20px';
+
+            localStorage.setItem('tinyDj_showSeek', showSeek);
+            localStorage.setItem('tinyDj_showHostIp', showHostIp);
+            localStorage.setItem('tinyDj_showCast', showCast);
+        }
+
+        function toggleModal() {
+            document.getElementById('settingsModal').classList.toggle('modal-open');
+        }
+
+        function manualIpChange(val) {
+            localStorage.setItem('tinyDjHostIp', val);
+            ipDisplay.innerText = `IP: ${val}`;
+            updateLinks(val);
+            fetchStatus();
+        }
+
+        function updateLinks(ip) {
+            if (ip && ip.includes('.')) {
+                document.getElementById('box-link').href = `http://${ip}:8303`;
+                document.getElementById('bit-link').href = `http://${ip}:3030`;            }
+        }
+
+        /* --- SIMPLIFIED BLUETOOTH FUNCTIONS --- */
+        async function getService() {
+            if (activeDevice && activeDevice.gatt.connected) {
+                return activeDevice.gatt.getPrimaryService(SERVICE_UUID);
+            }
+            activeDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ services: [SERVICE_UUID] }]
+            });
+            const server = await activeDevice.gatt.connect();
+            return server.getPrimaryService(SERVICE_UUID);
+        }
+
+        async function oneClickSync() {
+            const ssid = document.getElementById('ssid').value;
+            const pass = document.getElementById('pass').value;
+
+            if(!ssid || !pass) return updateStatus("SSID and passphrase required", "bad");
+
+            try {
+                updateStatus("Connecting to device…", "busy");
+                syncBtn.innerText = "Connecting…";
+
+                const service = await getService();
+                const enc = new TextEncoder();
+
+                await (await service.getCharacteristic(CHAR_SSID_UUID)).writeValue(enc.encode(ssid));
+                await (await service.getCharacteristic(CHAR_PASS_UUID)).writeValue(enc.encode(pass));
+
+                updateStatus("Waiting for IP…", "busy");
+                syncBtn.innerText = "Waiting for IP…";
+
+                const ipChar = await service.getCharacteristic(CHAR_IP_UUID);
+
+                while (true) {
+                    const value = await ipChar.readValue();
+                    const ip = new TextDecoder().decode(value);
+
+                    if (ip.includes(".") && !ip.toLowerCase().includes("connecting")) {
+                        manualIpChange(ip);
+                        hostIpInput.value = ip;
+                        syncBtn.innerText = "✓ Connected";
+                        syncBtn.classList.add('btn-success');
+                        updateStatus("Connected: " + ip, "ok");
+
+                        setTimeout(() => {
+                            toggleModal();
+                            syncBtn.classList.remove('btn-success');
+                            syncBtn.innerText = "Sync WiFi & get IP";
+                            updateStatus("Ready");
+                        }, 1500);
+                        break;
+                    }
+
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            } catch (e) {
+                updateStatus("Bluetooth error", "bad");
+                syncBtn.innerText = "Sync WiFi & get IP";
+            }
+        }
+
+        function handleCast() {
+            const url = castUrlInput.value.trim();
+            const ip = hostIpInput.value.trim();
+            if(!url || !ip || ip === "--.--.--.--") return updateStatus("Need a URL and IP", "bad");
+            updateStatus("Casting…", "busy");
+            fetch(`http://${ip}:7979/${encodeURIComponent(url)}`, { mode: 'no-cors' })
+                .then(() => { updateStatus("Cast sent", "ok"); castUrlInput.value = ""; setTimeout(() => updateStatus("Ready"), 2000); })
+                .catch(() => updateStatus("Failed", "bad"));
+        }
+
+        function tvButton() {
+            hitEndpoint(tvIsOn ? 'cec_tv_off' : 'cec_input4');
+            tvIsOn = !tvIsOn;
+            const tvBtn = document.getElementById('tvBtn');
+            if (tvBtn) tvBtn.innerText = tvIsOn ? "TV off" : "TV on";
+        }
+
+        function hitEndpoint(p) {
+            const ip = hostIpInput.value.trim();
+            if (p === 'pause') {
+                suppressPollUntil = Date.now() + 4000;
+            }
+
+            // Send POST for key/nerd endpoints, GET for others
+            const options = { mode: 'no-cors' };
+            if (p === 'key/nerd') {
+                options.method = 'POST';
+            }
+
+            updateStatus(`${p}…`, "busy");
+            fetch(`http://${ip}:7979/${p}`, options)
+                .then(() => { updateStatus("Sent", "ok"); setTimeout(() => updateStatus("Ready"), 1500); })
+                .catch(() => updateStatus("Offline", "bad"));
+        }
+
+        window.onload = () => {
+            const saved = localStorage.getItem('tinyDjHostIp') || "tinydj.local";
+            hostIpInput.value = saved;
+            ipDisplay.innerText = `IP: ${saved}`;
+            updateLinks(saved);
+
+            const seekOn = localStorage.getItem('tinyDj_showSeek') !== 'false';
+            const hostIpOn = localStorage.getItem('tinyDj_showHostIp') === 'true';
+            const castOn = localStorage.getItem('tinyDj_showCast') === 'true';
+
+            document.getElementById('checkSeek').checked = seekOn;
+            document.getElementById('checkHostIp').checked = hostIpOn;
+            document.getElementById('checkCast').checked = castOn;
+            updateVisibility();
+
+            fetchStatus();
+            setInterval(fetchStatus, 5000);
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            if (e.key === 'ArrowLeft') hitEndpoint('ui/prev');
+            if (e.key === 'ArrowUp') hitEndpoint('epg');
+            if (e.key === 'ArrowRight') hitEndpoint('ui/next');
+            if (e.code === 'Space') { e.preventDefault(); hitEndpoint('pause'); }
+        });
+
+        castUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleCast(); });
+
+        // tone: ok | warn | bad | busy, or omitted for muted
+        function updateStatus(msg, tone = "") {
+            const s = document.getElementById('status');
+            s.innerText = msg;
+            s.className = tone ? `is-${tone}` : '';
+        }
+    </script>
+</body>
+</html>
