@@ -129,6 +129,51 @@
             margin: 8px 0 12px;
         }
 
+        /* --- BATTERY (only when /status reports one: the R36S) --- */
+        .battery {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin: -4px 0 12px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        .battery.is-ok { color: var(--ok); }
+        .battery.is-warn { color: var(--warn); }
+        .battery.is-bad { color: var(--bad); }
+        .battery-icon {
+            position: relative;
+            width: 24px;
+            height: 12px;
+            padding: 1.5px;
+            border: 1.5px solid currentColor;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .battery-icon::after {
+            content: "";
+            position: absolute;
+            right: -4px;
+            top: 2.5px;
+            width: 2px;
+            height: 4px;
+            border-radius: 0 1px 1px 0;
+            background: currentColor;
+        }
+        .battery-fill {
+            display: block;
+            width: 0;
+            height: 100%;
+            border-radius: 1px;
+            background: currentColor;
+            transition: width 0.3s ease;
+        }
+        .battery-note { color: var(--muted); font-weight: 500; }
+        .battery.is-bad .battery-note { color: var(--bad); }
+
         /* --- SEEK SLIDER STYLES --- */
         .seek-container { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 4px; }
         .seek-time {
@@ -333,6 +378,11 @@
         <div class="main-display">
             <h1>Controls</h1>
             <p id="ip-display" class="ip-text">IP: --.--.--.--</p>
+            <p id="battery" class="battery hidden">
+                <span class="battery-icon" aria-hidden="true"><span class="battery-fill" id="batteryFill"></span></span>
+                <span id="batteryText">--%</span>
+                <span id="batteryNote" class="battery-note"></span>
+            </p>
 
             <div id="seekContainer" class="seek-container hidden">
                 <input type="range" id="seekSlider" class="seek-slider" min="0" max="100" value="0" step="1">
@@ -411,6 +461,11 @@
         const CHAR_SSID_UUID = '12345678-1234-5678-1234-56789abcdef2';
         const CHAR_PASS_UUID = '12345678-1234-5678-1234-56789abcdef3';
 
+        // The board's LED warns at this charge too (mgr's led.zig): Wi-Fi drops
+        // out on a low battery.
+        const BATTERY_LOW_PCT = 20;
+        const BATTERY_WARN_PCT = 40;
+
         let activeDevice = null;
         let isDraggingSeek = false;
         let suppressPollUntil = 0;
@@ -443,6 +498,37 @@
             return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }
 
+        // The battery row: shown only while /status carries a battery with a
+        // charge (the R36S); a board with none, or no answer, hides it.
+        // /status's battery is {percent, mv, charge}, each null when unread;
+        // charge is charging, discharging, full or not_charging.
+        function updateBattery(battery) {
+            const row = document.getElementById('battery');
+            const pct = battery && typeof battery.percent === 'number' ? battery.percent : null;
+            if (pct === null) {
+                row.classList.add('hidden');
+                return;
+            }
+            const charging = battery.charge === 'charging';
+            const full = battery.charge === 'full';
+            const tone = charging || full ? 'ok'
+                : pct <= BATTERY_LOW_PCT ? 'bad'
+                : pct <= BATTERY_WARN_PCT ? 'warn'
+                : 'ok';
+            let note = '';
+            if (charging) note = 'Charging';
+            else if (full) note = 'Full';
+            else if (pct <= BATTERY_LOW_PCT) note = 'Low: Wi-Fi may drop';
+
+            row.className = `battery is-${tone}`;
+            document.getElementById('batteryFill').style.width = `${Math.max(0, Math.min(100, pct))}%`;
+            document.getElementById('batteryText').innerText = `${pct}%`;
+            document.getElementById('batteryNote').innerText = note;
+            const volts = typeof battery.mv === 'number' ? ` · ${(battery.mv / 1000).toFixed(2)} V` : '';
+            row.title = `Battery ${pct}%${volts}`;
+            row.setAttribute('aria-label', `Battery ${pct}%${note ? ', ' + note : ''}`);
+        }
+
         function updateSeekContainerVisibility() {
             const showSeekSetting = document.getElementById('checkSeek').checked;
             const shouldShow = showSeekSetting && hasStatusData && !isLiveStream;
@@ -463,6 +549,7 @@
             if (!ip || ip === "--.--.--.--") {
                 hasStatusData = false;
                 updateSeekContainerVisibility();
+                updateBattery(null);
                 return;
             }
 
@@ -474,6 +561,7 @@
                     isLiveStream = !!data.live;
                     isPaused = !!data.paused;
                     updateSeekContainerVisibility();
+                    updateBattery(data.battery);
 
                     if (typeof data.tv_on === 'boolean') {
                         tvIsOn = data.tv_on;
@@ -509,10 +597,12 @@
                 } else {
                     hasStatusData = false;
                     updateSeekContainerVisibility();
+                    updateBattery(null);
                 }
             } catch(e) {
                 hasStatusData = false;
                 updateSeekContainerVisibility();
+                updateBattery(null);
             }
         }
 
