@@ -565,8 +565,7 @@
 
                     if (typeof data.tv_on === 'boolean') {
                         tvIsOn = data.tv_on;
-                        const tvBtn = document.getElementById('tvBtn');
-                        if (tvBtn) tvBtn.innerText = tvIsOn ? "TV off" : "TV on";
+                        updateTvButton();
                     }
 
                     const playPauseBtn = document.getElementById('playPauseBtn');
@@ -742,9 +741,17 @@
                 .catch(() => updateStatus("Failed", "bad"));
         }
 
+        // dj's power key, which each board takes its own way: over CEC the
+        // television's standby, or its input 4 while it is off; on the R36S
+        // the handheld's standby (screen and sound off, paused), which the
+        // same press undoes. /status's tv_on says which it is in now.
         function tvButton() {
-            hitEndpoint(tvIsOn ? 'cec_tv_off' : 'cec_input4');
+            hitEndpoint('key/power');
             tvIsOn = !tvIsOn;
+            updateTvButton();
+        }
+
+        function updateTvButton() {
             const tvBtn = document.getElementById('tvBtn');
             if (tvBtn) tvBtn.innerText = tvIsOn ? "TV off" : "TV on";
         }
@@ -755,9 +762,9 @@
                 suppressPollUntil = Date.now() + 4000;
             }
 
-            // Send POST for key/nerd endpoints, GET for others
+            // POST for the key/ endpoints (key/nerd, key/power), GET for others
             const options = { mode: 'no-cors' };
-            if (p === 'key/nerd') {
+            if (p.startsWith('key/')) {
                 options.method = 'POST';
             }
 
