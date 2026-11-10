@@ -122,14 +122,36 @@
             line-height: 1;
             margin: 0;
         }
-        .ip-text {
-            color: var(--dim);
-            font-size: 13px;
-            font-variant-numeric: tabular-nums;
+        .ip-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
             margin: 8px 0 12px;
         }
+        .ip-select-main {
+            background: transparent;
+            border: none;
+            color: var(--dim);
+            font: 400 13px/1.2 var(--font);
+            font-variant-numeric: tabular-nums;
+            cursor: pointer;
+            outline: none;
+            text-align-last: center;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: color 0.15s, background 0.15s;
+        }
+        .ip-select-main:hover, .ip-select-main:focus {
+            color: var(--text);
+            background: var(--btn-bg);
+        }
+        .ip-select-main option {
+            background: var(--card-bg);
+            color: var(--text);
+        }
 
-        /* --- BATTERY (only when /status reports one: the R36S) --- */
+        /* --- BATTERY --- */
         .battery {
             display: flex;
             justify-content: center;
@@ -297,7 +319,7 @@
         }
 
         label { display: block; font-size: 12px; margin-bottom: 6px; color: var(--muted); font-weight: 600; }
-        input:not([type="range"]):not([type="checkbox"]) {
+        input:not([type="range"]):not([type="checkbox"]), select {
             width: 100%;
             padding: 11px 12px;
             background: #000;
@@ -308,7 +330,38 @@
             outline: none;
             margin-bottom: 14px;
         }
-        input:not([type="range"]):not([type="checkbox"]):focus { border-color: var(--muted); }
+        input:not([type="range"]):not([type="checkbox"]):focus, select:focus { border-color: var(--muted); }
+        select {
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%23888888" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 32px;
+            cursor: pointer;
+        }
+        select option { background: var(--card-bg); color: var(--text); }
+
+        /* --- HOST MANAGEMENT UI --- */
+        .host-input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 0;
+        }
+        .host-input-group input { margin-bottom: 0 !important; }
+        .btn-small {
+            padding: 6px 10px;
+            background: var(--btn-bg);
+            border: 1px solid var(--line-2);
+            border-radius: 8px;
+            color: var(--text);
+            font: 600 12px/1 var(--font);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-small:hover { background: var(--btn-hover); }
+        .btn-small.is-danger { color: var(--bad); border-color: rgba(217, 128, 128, 0.3); }
+        .btn-small.is-danger:hover { background: rgba(217, 128, 128, 0.15); }
 
         /* --- TOGGLE VISIBILITY GRID --- */
         .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
@@ -377,7 +430,11 @@
         </div>
         <div class="main-display">
             <h1>Controls</h1>
-            <p id="ip-display" class="ip-text">IP: --.--.--.--</p>
+            <div class="ip-wrapper">
+                <select id="mainHostSelect" class="ip-select-main" onchange="selectHost(this.value)">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
             <p id="battery" class="battery hidden">
                 <span class="battery-icon" aria-hidden="true"><span class="battery-fill" id="batteryFill"></span></span>
                 <span id="batteryText">--%</span>
@@ -417,9 +474,12 @@
             <label for="pass">WiFi passphrase</label>
             <input type="password" id="pass" placeholder="••••••••" value="qwertyui">
 
-            <div id="hostIpRow">
-                <label for="hostIp">Host IP</label>
-                <input type="text" id="hostIp" placeholder="tinydj.local" onchange="manualIpChange(this.value)">
+            <div id="hostSection">
+                <label>Manage Hosts</label>
+                <div id="hostListContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;">
+                    <!-- Populated dynamically with all hosts -->
+                </div>
+                <button class="btn-small" onclick="addNewHost()" style="width: 100%; margin-bottom: 14px; padding: 10px;">+ Add New Host</button>
             </div>
 
             <label>Show on remote</label>
@@ -447,8 +507,9 @@
     </div>
 
     <script>
-        const hostIpInput = document.getElementById('hostIp');
-        const ipDisplay = document.getElementById('ip-display');
+        const mainHostSelect = document.getElementById('mainHostSelect');
+        const hostSection = document.getElementById('hostSection');
+        const hostListContainer = document.getElementById('hostListContainer');
         const syncBtn = document.getElementById('syncBtn');
         const castUrlInput = document.getElementById('castUrl');
         const seekSlider = document.getElementById('seekSlider');
@@ -461,8 +522,6 @@
         const CHAR_SSID_UUID = '12345678-1234-5678-1234-56789abcdef2';
         const CHAR_PASS_UUID = '12345678-1234-5678-1234-56789abcdef3';
 
-        // The board's LED warns at this charge too (mgr's led.zig): Wi-Fi drops
-        // out on a low battery.
         const BATTERY_LOW_PCT = 20;
         const BATTERY_WARN_PCT = 40;
 
@@ -474,6 +533,126 @@
         let isLiveStream = false;
         let isPaused = false;
         let lastAsciiClickTime = 0;
+
+        /* --- HOST MANAGEMENT STATE --- */
+        let hosts = [];
+        let activeHostId = null;
+
+        function loadHosts() {
+            const defaultHosts = [{ id: 'default', name: 'Default', ip: 'tinydj.local' }];
+            try {
+                const saved = localStorage.getItem('tinyDjHosts');
+                hosts = saved ? JSON.parse(saved) : defaultHosts;
+            } catch(e) {
+                hosts = defaultHosts;
+            }
+            activeHostId = localStorage.getItem('tinyDjActiveHostId') || hosts[0].id;
+            if (!hosts.some(h => h.id === activeHostId)) {
+                activeHostId = hosts[0].id;
+            }
+            renderHostList();
+            updateLinks(getActiveHost().ip);
+        }
+
+        function saveHosts() {
+            localStorage.setItem('tinyDjHosts', JSON.stringify(hosts));
+            localStorage.setItem('tinyDjActiveHostId', activeHostId);
+        }
+
+        function renderHostList() {
+            // Render all hosts in the settings modal list
+            hostListContainer.innerHTML = hosts.map((h, index) => {
+                const isActive = h.id === activeHostId;
+                return `
+                    <div style="background: #000; border: 1px solid ${isActive ? 'var(--text-2)' : 'var(--line)'}; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 11px; font-weight: 700; color: ${isActive ? 'var(--ok)' : 'var(--muted)'};">
+                                ${isActive ? '● Active Host' : 'Host ' + (index + 1)}
+                            </span>
+                            <div style="display: flex; gap: 6px;">
+                                ${!isActive ? `<button class="btn-small" style="padding: 2px 8px; font-size: 11px;" onclick="selectHost('${h.id}')">Use</button>` : ''}
+                                ${hosts.length > 1 ? `<button class="btn-small is-danger" style="padding: 2px 8px; font-size: 11px;" onclick="deleteHost('${h.id}')">Delete</button>` : ''}
+                            </div>
+                        </div>
+                        <div class="host-input-group">
+                            <div>
+                                <label style="font-size: 10px; margin-bottom: 2px;">Name</label>
+                                <input type="text" value="${h.name || ''}" placeholder="Living Room" onchange="updateHostField('${h.id}', 'name', this.value)" style="margin-bottom: 0 !important; font-size: 13px; padding: 8px 10px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; margin-bottom: 2px;">IP / Domain</label>
+                                <input type="text" value="${h.ip || ''}" placeholder="tinydj.local" onchange="updateHostField('${h.id}', 'ip', this.value)" style="margin-bottom: 0 !important; font-size: 13px; padding: 8px 10px;">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Update main card dropdown options
+            const optionsHtml = hosts.map(h => 
+                `<option value="${h.id}">${h.name ? h.name + ' (' + h.ip + ')' : h.ip}</option>`
+            ).join('');
+            mainHostSelect.innerHTML = optionsHtml;
+            mainHostSelect.value = activeHostId;
+        }
+
+        function getActiveHost() {
+            return hosts.find(h => h.id === activeHostId) || hosts[0];
+        }
+
+        function selectHost(id) {
+            activeHostId = id;
+            saveHosts();
+            renderHostList();
+            updateLinks(getActiveHost().ip);
+            fetchStatus();
+        }
+
+        function updateHostField(id, field, val) {
+            const h = hosts.find(item => item.id === id);
+            if (h) {
+                h[field] = val.trim();
+                saveHosts();
+                renderHostList();
+                if (id === activeHostId) {
+                    updateLinks(h.ip);
+                }
+            }
+        }
+
+        function addNewHost() {
+            const newId = 'host_' + Date.now();
+            hosts.push({ id: newId, name: 'New Host', ip: 'tinydj.local' });
+            activeHostId = newId;
+            saveHosts();
+            renderHostList();
+            updateLinks(getActiveHost().ip);
+            fetchStatus();
+        }
+
+        function deleteHost(id) {
+            if (hosts.length <= 1) {
+                return updateStatus("Cannot delete only host", "bad");
+            }
+            hosts = hosts.filter(h => h.id !== id);
+            if (activeHostId === id) {
+                activeHostId = hosts[0].id;
+            }
+            saveHosts();
+            renderHostList();
+            updateLinks(getActiveHost().ip);
+            fetchStatus();
+        }
+
+        function updateHostFromBle(ip) {
+            const current = getActiveHost();
+            if (current) {
+                current.ip = ip;
+                saveHosts();
+                renderHostList();
+                updateLinks(ip);
+            }
+        }
 
         // Double tap / double click listener for ASCII art
         asciiContainer.addEventListener('click', () => {
@@ -498,10 +677,6 @@
             return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }
 
-        // The battery row: shown only while /status carries a battery with a
-        // charge (the R36S); a board with none, or no answer, hides it.
-        // /status's battery is {percent, mv, charge}, each null when unread;
-        // charge is charging, discharging, full or not_charging.
         function updateBattery(battery) {
             const row = document.getElementById('battery');
             const pct = battery && typeof battery.percent === 'number' ? battery.percent : null;
@@ -536,8 +711,6 @@
             updatePlayPauseVisibility();
         }
 
-        // Play/Pause shows for streams with a length, and whenever paused so
-        // a paused live stream can always be resumed.
         function updatePlayPauseVisibility() {
             const shouldShow = hasStatusData && (!isLiveStream || isPaused);
             document.getElementById('playPauseBtn').classList.toggle('hidden', !shouldShow);
@@ -545,7 +718,8 @@
 
         async function fetchStatus() {
             if (Date.now() < suppressPollUntil || isDraggingSeek) return;
-            const ip = hostIpInput.value.trim();
+            const currentHost = getActiveHost();
+            const ip = currentHost ? currentHost.ip.trim() : "";
             if (!ip || ip === "--.--.--.--") {
                 hasStatusData = false;
                 updateSeekContainerVisibility();
@@ -620,7 +794,8 @@
 
         seekSlider.addEventListener('change', (e) => {
             const targetSec = Math.round(e.target.value);
-            const ip = hostIpInput.value.trim();
+            const currentHost = getActiveHost();
+            const ip = currentHost ? currentHost.ip.trim() : "";
             suppressPollUntil = Date.now() + 5000;
             isDraggingSeek = false;
 
@@ -642,7 +817,8 @@
 
             updateSeekContainerVisibility();
 
-            document.getElementById('hostIpRow').classList.toggle('hidden', !showHostIp);
+            mainHostSelect.parentElement.classList.toggle('hidden', !showHostIp);
+            hostSection.classList.toggle('hidden', !showHostIp);
 
             const bottomBar = document.getElementById('bottomBar');
             bottomBar.classList.toggle('hidden', !showCast);
@@ -657,20 +833,14 @@
             document.getElementById('settingsModal').classList.toggle('modal-open');
         }
 
-        function manualIpChange(val) {
-            localStorage.setItem('tinyDjHostIp', val);
-            ipDisplay.innerText = `IP: ${val}`;
-            updateLinks(val);
-            fetchStatus();
-        }
-
         function updateLinks(ip) {
             if (ip && ip.includes('.')) {
                 document.getElementById('box-link').href = `http://${ip}:8303`;
-                document.getElementById('bit-link').href = `http://${ip}:3030`;            }
+                document.getElementById('bit-link').href = `http://${ip}:3030`;
+            }
         }
 
-        /* --- SIMPLIFIED BLUETOOTH FUNCTIONS --- */
+        /* --- BLUETOOTH FUNCTIONS --- */
         async function getService() {
             if (activeDevice && activeDevice.gatt.connected) {
                 return activeDevice.gatt.getPrimaryService(SERVICE_UUID);
@@ -708,8 +878,7 @@
                     const ip = new TextDecoder().decode(value);
 
                     if (ip.includes(".") && !ip.toLowerCase().includes("connecting")) {
-                        manualIpChange(ip);
-                        hostIpInput.value = ip;
+                        updateHostFromBle(ip);
                         syncBtn.innerText = "✓ Connected";
                         syncBtn.classList.add('btn-success');
                         updateStatus("Connected: " + ip, "ok");
@@ -733,7 +902,8 @@
 
         function handleCast() {
             const url = castUrlInput.value.trim();
-            const ip = hostIpInput.value.trim();
+            const currentHost = getActiveHost();
+            const ip = currentHost ? currentHost.ip.trim() : "";
             if(!url || !ip || ip === "--.--.--.--") return updateStatus("Need a URL and IP", "bad");
             updateStatus("Casting…", "busy");
             fetch(`http://${ip}:7979/${encodeURIComponent(url)}`, { mode: 'no-cors' })
@@ -741,10 +911,6 @@
                 .catch(() => updateStatus("Failed", "bad"));
         }
 
-        // dj's power key, which each board takes its own way: over CEC the
-        // television's standby, or its input 4 while it is off; on the R36S
-        // the handheld's standby (screen and sound off, paused), which the
-        // same press undoes. /status's tv_on says which it is in now.
         function tvButton() {
             hitEndpoint('key/power');
             tvIsOn = !tvIsOn;
@@ -757,12 +923,12 @@
         }
 
         function hitEndpoint(p) {
-            const ip = hostIpInput.value.trim();
+            const currentHost = getActiveHost();
+            const ip = currentHost ? currentHost.ip.trim() : "";
             if (p === 'pause') {
                 suppressPollUntil = Date.now() + 4000;
             }
 
-            // POST for the key/ endpoints (key/nerd, key/power), GET for others
             const options = { mode: 'no-cors' };
             if (p.startsWith('key/')) {
                 options.method = 'POST';
@@ -775,10 +941,7 @@
         }
 
         window.onload = () => {
-            const saved = localStorage.getItem('tinyDjHostIp') || "tinydj.local";
-            hostIpInput.value = saved;
-            ipDisplay.innerText = `IP: ${saved}`;
-            updateLinks(saved);
+            loadHosts();
 
             const seekOn = localStorage.getItem('tinyDj_showSeek') !== 'false';
             const hostIpOn = localStorage.getItem('tinyDj_showHostIp') === 'true';
@@ -803,7 +966,6 @@
 
         castUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleCast(); });
 
-        // tone: ok | warn | bad | busy, or omitted for muted
         function updateStatus(msg, tone = "") {
             const s = document.getElementById('status');
             s.innerText = msg;
