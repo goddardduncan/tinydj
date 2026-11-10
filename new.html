@@ -122,12 +122,79 @@
             line-height: 1;
             margin: 0;
         }
-        .ip-text {
-            color: var(--dim);
-            font-size: 13px;
-            font-variant-numeric: tabular-nums;
+        .ip-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
             margin: 8px 0 12px;
         }
+        .ip-select-main {
+            background: transparent;
+            border: none;
+            color: var(--dim);
+            font: 400 13px/1.2 var(--font);
+            font-variant-numeric: tabular-nums;
+            cursor: pointer;
+            outline: none;
+            text-align-last: center;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: color 0.15s, background 0.15s;
+        }
+        .ip-select-main:hover, .ip-select-main:focus {
+            color: var(--text);
+            background: var(--btn-bg);
+        }
+        .ip-select-main option {
+            background: var(--card-bg);
+            color: var(--text);
+        }
+
+        /* --- BATTERY --- */
+        .battery {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin: -4px 0 12px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        .battery.is-ok { color: var(--ok); }
+        .battery.is-warn { color: var(--warn); }
+        .battery.is-bad { color: var(--bad); }
+        .battery-icon {
+            position: relative;
+            width: 24px;
+            height: 12px;
+            padding: 1.5px;
+            border: 1.5px solid currentColor;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .battery-icon::after {
+            content: "";
+            position: absolute;
+            right: -4px;
+            top: 2.5px;
+            width: 2px;
+            height: 4px;
+            border-radius: 0 1px 1px 0;
+            background: currentColor;
+        }
+        .battery-fill {
+            display: block;
+            width: 0;
+            height: 100%;
+            border-radius: 1px;
+            background: currentColor;
+            transition: width 0.3s ease;
+        }
+        .battery-note { color: var(--muted); font-weight: 500; }
+        .battery.is-bad .battery-note { color: var(--bad); }
 
         /* --- SEEK SLIDER STYLES --- */
         .seek-container { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 4px; }
@@ -252,7 +319,7 @@
         }
 
         label { display: block; font-size: 12px; margin-bottom: 6px; color: var(--muted); font-weight: 600; }
-        input:not([type="range"]):not([type="checkbox"]) {
+        input:not([type="range"]):not([type="checkbox"]), select {
             width: 100%;
             padding: 11px 12px;
             background: #000;
@@ -263,7 +330,44 @@
             outline: none;
             margin-bottom: 14px;
         }
-        input:not([type="range"]):not([type="checkbox"]):focus { border-color: var(--muted); }
+        input:not([type="range"]):not([type="checkbox"]):focus, select:focus { border-color: var(--muted); }
+        select {
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%23888888" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 32px;
+            cursor: pointer;
+        }
+        select option { background: var(--card-bg); color: var(--text); }
+
+        /* --- HOST MANAGEMENT UI --- */
+        .host-input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .host-input-group input { margin-bottom: 0 !important; }
+        .host-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .btn-small {
+            flex: 1;
+            padding: 8px;
+            background: var(--btn-bg);
+            border: 1px solid var(--line-2);
+            border-radius: 8px;
+            color: var(--text);
+            font: 600 12px/1 var(--font);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-small:hover { background: var(--btn-hover); }
+        .btn-small.is-danger { color: var(--bad); border-color: rgba(217, 128, 128, 0.3); }
+        .btn-small.is-danger:hover { background: rgba(217, 128, 128, 0.15); }
 
         /* --- TOGGLE VISIBILITY GRID --- */
         .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
@@ -315,24 +419,27 @@
 <body>
     <div class="top-bar">
         <div class="nav-group">
-            <a id="bit-link" href="#" target="_blank" class="nav-btn">Bit</a>
-            <a id="box-link" href="#" target="_blank" class="nav-btn">Box</a>
+            <a id="bit-link" href="#" target="_blank" class="nav-btn">Transfers</a>
+            <a id="box-link" href="#" target="_blank" class="nav-btn">TreenFlix</a>
         </div>
     </div>
 
     <div class="card">
         <div class="ascii-container" id="asciiContainer" title="Double tap for nerd stats">
-            <pre class="ascii-header">
-   __  _                ____    _
-  / /_(_)___  __  __   / __ \  (_)
- / __/ / __ \/ / / /  / / / / / /
-/ /_/ / / / / /_/ /  / /_/ / / /
-\__/_/_/ /_/\__, /  /_____/_/ /
-           /____/        /___/   </pre>
+            <pre class="ascii-header">   __  _                ____    _  / /_(_)___  __  __   / __ \  (_) / __/ / __ \/ / / /  / / / / / // /_/ / / / / /_/ /  / /_/ / / /\__/_/_/ /_/\__, /  /_____/_/ /           /____/        /___/   </pre>
         </div>
         <div class="main-display">
             <h1>Controls</h1>
-            <p id="ip-display" class="ip-text">IP: --.--.--.--</p>
+            <div class="ip-wrapper">
+                <select id="mainHostSelect" class="ip-select-main" onchange="selectHost(this.value)">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <p id="battery" class="battery hidden">
+                <span class="battery-icon" aria-hidden="true"><span class="battery-fill" id="batteryFill"></span></span>
+                <span id="batteryText">--%</span>
+                <span id="batteryNote" class="battery-note"></span>
+            </p>
 
             <div id="seekContainer" class="seek-container hidden">
                 <input type="range" id="seekSlider" class="seek-slider" min="0" max="100" value="0" step="1">
@@ -368,8 +475,23 @@
             <input type="password" id="pass" placeholder="••••••••" value="qwertyui">
 
             <div id="hostIpRow">
-                <label for="hostIp">Host IP</label>
-                <input type="text" id="hostIp" placeholder="tinydj.local" onchange="manualIpChange(this.value)">
+                <label for="hostSelect">Select Host</label>
+                <select id="hostSelect" onchange="selectHost(this.value)"></select>
+
+                <div class="host-input-group">
+                    <div>
+                        <label for="hostName">Name</label>
+                        <input type="text" id="hostName" placeholder="Living Room" oninput="saveCurrentHostDetails()">
+                    </div>
+                    <div>
+                        <label for="hostIp">Host IP / Domain</label>
+                        <input type="text" id="hostIp" placeholder="tinydj.local" oninput="saveCurrentHostDetails()">
+                    </div>
+                </div>
+                <div class="host-actions">
+                    <button class="btn-small" onclick="addNewHost()">+ Add New Host</button>
+                    <button class="btn-small is-danger" onclick="deleteCurrentHost()">Delete Host</button>
+                </div>
             </div>
 
             <label>Show on remote</label>
@@ -398,7 +520,9 @@
 
     <script>
         const hostIpInput = document.getElementById('hostIp');
-        const ipDisplay = document.getElementById('ip-display');
+        const hostNameInput = document.getElementById('hostName');
+        const hostSelect = document.getElementById('hostSelect');
+        const mainHostSelect = document.getElementById('mainHostSelect');
         const syncBtn = document.getElementById('syncBtn');
         const castUrlInput = document.getElementById('castUrl');
         const seekSlider = document.getElementById('seekSlider');
@@ -411,6 +535,9 @@
         const CHAR_SSID_UUID = '12345678-1234-5678-1234-56789abcdef2';
         const CHAR_PASS_UUID = '12345678-1234-5678-1234-56789abcdef3';
 
+        const BATTERY_LOW_PCT = 20;
+        const BATTERY_WARN_PCT = 40;
+
         let activeDevice = null;
         let isDraggingSeek = false;
         let suppressPollUntil = 0;
@@ -419,6 +546,109 @@
         let isLiveStream = false;
         let isPaused = false;
         let lastAsciiClickTime = 0;
+
+        /* --- HOST MANAGEMENT STATE --- */
+        let hosts = [];
+        let activeHostId = null;
+
+        function loadHosts() {
+            const defaultHosts = [{ id: 'default', name: 'Default', ip: 'tinydj.local' }];
+            try {
+                const saved = localStorage.getItem('tinyDjHosts');
+                hosts = saved ? JSON.parse(saved) : defaultHosts;
+            } catch(e) {
+                hosts = defaultHosts;
+            }
+            activeHostId = localStorage.getItem('tinyDjActiveHostId') || hosts[0].id;
+            if (!hosts.some(h => h.id === activeHostId)) {
+                activeHostId = hosts[0].id;
+            }
+            renderHostDropdowns();
+            populateHostForm();
+        }
+
+        function saveHosts() {
+            localStorage.setItem('tinyDjHosts', JSON.stringify(hosts));
+            localStorage.setItem('tinyDjActiveHostId', activeHostId);
+        }
+
+        function renderHostDropdowns() {
+            const optionsHtml = hosts.map(h => 
+                `<option value="${h.id}">${h.name ? h.name + ' (' + h.ip + ')' : h.ip}</option>`
+            ).join('');
+
+            hostSelect.innerHTML = optionsHtml;
+            mainHostSelect.innerHTML = optionsHtml;
+
+            hostSelect.value = activeHostId;
+            mainHostSelect.value = activeHostId;
+        }
+
+        function populateHostForm() {
+            const current = getActiveHost();
+            if (current) {
+                hostNameInput.value = current.name || '';
+                hostIpInput.value = current.ip || '';
+                updateLinks(current.ip);
+            }
+        }
+
+        function getActiveHost() {
+            return hosts.find(h => h.id === activeHostId) || hosts[0];
+        }
+
+        function selectHost(id) {
+            activeHostId = id;
+            saveHosts();
+            renderHostDropdowns();
+            populateHostForm();
+            fetchStatus();
+        }
+
+        function saveCurrentHostDetails() {
+            const current = getActiveHost();
+            if (current) {
+                current.name = hostNameInput.value.trim();
+                current.ip = hostIpInput.value.trim();
+                saveHosts();
+                renderHostDropdowns();
+                updateLinks(current.ip);
+            }
+        }
+
+        function addNewHost() {
+            const newId = 'host_' + Date.now();
+            const newHost = { id: newId, name: 'New Host', ip: 'tinydj.local' };
+            hosts.push(newHost);
+            activeHostId = newId;
+            saveHosts();
+            renderHostDropdowns();
+            populateHostForm();
+            hostNameInput.focus();
+            fetchStatus();
+        }
+
+        function deleteCurrentHost() {
+            if (hosts.length <= 1) {
+                return updateStatus("Cannot delete only host", "bad");
+            }
+            hosts = hosts.filter(h => h.id !== activeHostId);
+            activeHostId = hosts[0].id;
+            saveHosts();
+            renderHostDropdowns();
+            populateHostForm();
+            fetchStatus();
+        }
+
+        function updateHostFromBle(ip) {
+            const current = getActiveHost();
+            if (current) {
+                current.ip = ip;
+                saveHosts();
+                renderHostDropdowns();
+                populateHostForm();
+            }
+        }
 
         // Double tap / double click listener for ASCII art
         asciiContainer.addEventListener('click', () => {
@@ -443,6 +673,33 @@
             return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }
 
+        function updateBattery(battery) {
+            const row = document.getElementById('battery');
+            const pct = battery && typeof battery.percent === 'number' ? battery.percent : null;
+            if (pct === null) {
+                row.classList.add('hidden');
+                return;
+            }
+            const charging = battery.charge === 'charging';
+            const full = battery.charge === 'full';
+            const tone = charging || full ? 'ok'
+                : pct <= BATTERY_LOW_PCT ? 'bad'
+                : pct <= BATTERY_WARN_PCT ? 'warn'
+                : 'ok';
+            let note = '';
+            if (charging) note = 'Charging';
+            else if (full) note = 'Full';
+            else if (pct <= BATTERY_LOW_PCT) note = 'Low: Wi-Fi may drop';
+
+            row.className = `battery is-${tone}`;
+            document.getElementById('batteryFill').style.width = `${Math.max(0, Math.min(100, pct))}%`;
+            document.getElementById('batteryText').innerText = `${pct}%`;
+            document.getElementById('batteryNote').innerText = note;
+            const volts = typeof battery.mv === 'number' ? ` · ${(battery.mv / 1000).toFixed(2)} V` : '';
+            row.title = `Battery ${pct}%${volts}`;
+            row.setAttribute('aria-label', `Battery ${pct}%${note ? ', ' + note : ''}`);
+        }
+
         function updateSeekContainerVisibility() {
             const showSeekSetting = document.getElementById('checkSeek').checked;
             const shouldShow = showSeekSetting && hasStatusData && !isLiveStream;
@@ -450,8 +707,6 @@
             updatePlayPauseVisibility();
         }
 
-        // Play/Pause shows for streams with a length, and whenever paused so
-        // a paused live stream can always be resumed.
         function updatePlayPauseVisibility() {
             const shouldShow = hasStatusData && (!isLiveStream || isPaused);
             document.getElementById('playPauseBtn').classList.toggle('hidden', !shouldShow);
@@ -459,10 +714,12 @@
 
         async function fetchStatus() {
             if (Date.now() < suppressPollUntil || isDraggingSeek) return;
-            const ip = hostIpInput.value.trim();
+            const currentHost = getActiveHost();
+            const ip = currentHost ? currentHost.ip.trim() : "";
             if (!ip || ip === "--.--.--.--") {
                 hasStatusData = false;
                 updateSeekContainerVisibility();
+                updateBattery(null);
                 return;
             }
 
@@ -474,11 +731,11 @@
                     isLiveStream = !!data.live;
                     isPaused = !!data.paused;
                     updateSeekContainerVisibility();
+                    updateBattery(data.battery);
 
                     if (typeof data.tv_on === 'boolean') {
                         tvIsOn = data.tv_on;
-                        const tvBtn = document.getElementById('tvBtn');
-                        if (tvBtn) tvBtn.innerText = tvIsOn ? "TV off" : "TV on";
+                        updateTvButton();
                     }
 
                     const playPauseBtn = document.getElementById('playPauseBtn');
@@ -509,10 +766,12 @@
                 } else {
                     hasStatusData = false;
                     updateSeekContainerVisibility();
+                    updateBattery(null);
                 }
             } catch(e) {
                 hasStatusData = false;
                 updateSeekContainerVisibility();
+                updateBattery(null);
             }
         }
 
@@ -531,7 +790,8 @@
 
         seekSlider.addEventListener('change', (e) => {
             const targetSec = Math.round(e.target.value);
-            const ip = hostIpInput.value.trim();
+            const currentHost = getActiveHost();
+            const ip = currentHost ? currentHost.ip.trim() : "";
             suppressPollUntil = Date.now() + 5000;
             isDraggingSeek = false;
 
@@ -553,7 +813,7 @@
 
             updateSeekContainerVisibility();
 
-            document.getElementById('hostIpRow').classList.toggle('hidden', !showHostIp);
+            mainHostSelect.parentElement.classList.toggle('hidden', !showHostIp);
 
             const bottomBar = document.getElementById('bottomBar');
             bottomBar.classList.toggle('hidden', !showCast);
@@ -568,20 +828,14 @@
             document.getElementById('settingsModal').classList.toggle('modal-open');
         }
 
-        function manualIpChange(val) {
-            localStorage.setItem('tinyDjHostIp', val);
-            ipDisplay.innerText = `IP: ${val}`;
-            updateLinks(val);
-            fetchStatus();
-        }
-
         function updateLinks(ip) {
             if (ip && ip.includes('.')) {
                 document.getElementById('box-link').href = `http://${ip}:8303`;
-                document.getElementById('bit-link').href = `http://${ip}:3030`;            }
+                document.getElementById('bit-link').href = `http://${ip}:3030`;
+            }
         }
 
-        /* --- SIMPLIFIED BLUETOOTH FUNCTIONS --- */
+        /* --- BLUETOOTH FUNCTIONS --- */
         async function getService() {
             if (activeDevice && activeDevice.gatt.connected) {
                 return activeDevice.gatt.getPrimaryService(SERVICE_UUID);
@@ -619,8 +873,7 @@
                     const ip = new TextDecoder().decode(value);
 
                     if (ip.includes(".") && !ip.toLowerCase().includes("connecting")) {
-                        manualIpChange(ip);
-                        hostIpInput.value = ip;
+                        updateHostFromBle(ip);
                         syncBtn.innerText = "✓ Connected";
                         syncBtn.classList.add('btn-success');
                         updateStatus("Connected: " + ip, "ok");
@@ -644,7 +897,8 @@
 
         function handleCast() {
             const url = castUrlInput.value.trim();
-            const ip = hostIpInput.value.trim();
+            const currentHost = getActiveHost();
+            const ip = currentHost ? currentHost.ip.trim() : "";
             if(!url || !ip || ip === "--.--.--.--") return updateStatus("Need a URL and IP", "bad");
             updateStatus("Casting…", "busy");
             fetch(`http://${ip}:7979/${encodeURIComponent(url)}`, { mode: 'no-cors' })
@@ -653,21 +907,25 @@
         }
 
         function tvButton() {
-            hitEndpoint(tvIsOn ? 'cec_tv_off' : 'cec_input4');
+            hitEndpoint('key/power');
             tvIsOn = !tvIsOn;
+            updateTvButton();
+        }
+
+        function updateTvButton() {
             const tvBtn = document.getElementById('tvBtn');
             if (tvBtn) tvBtn.innerText = tvIsOn ? "TV off" : "TV on";
         }
 
         function hitEndpoint(p) {
-            const ip = hostIpInput.value.trim();
+            const currentHost = getActiveHost();
+            const ip = currentHost ? currentHost.ip.trim() : "";
             if (p === 'pause') {
                 suppressPollUntil = Date.now() + 4000;
             }
 
-            // Send POST for key/nerd endpoints, GET for others
             const options = { mode: 'no-cors' };
-            if (p === 'key/nerd') {
+            if (p.startsWith('key/')) {
                 options.method = 'POST';
             }
 
@@ -678,10 +936,7 @@
         }
 
         window.onload = () => {
-            const saved = localStorage.getItem('tinyDjHostIp') || "tinydj.local";
-            hostIpInput.value = saved;
-            ipDisplay.innerText = `IP: ${saved}`;
-            updateLinks(saved);
+            loadHosts();
 
             const seekOn = localStorage.getItem('tinyDj_showSeek') !== 'false';
             const hostIpOn = localStorage.getItem('tinyDj_showHostIp') === 'true';
@@ -706,7 +961,6 @@
 
         castUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleCast(); });
 
-        // tone: ok | warn | bad | busy, or omitted for muted
         function updateStatus(msg, tone = "") {
             const s = document.getElementById('status');
             s.innerText = msg;
