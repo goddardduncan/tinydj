@@ -346,17 +346,11 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 0;
         }
         .host-input-group input { margin-bottom: 0 !important; }
-        .host-actions {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 14px;
-        }
         .btn-small {
-            flex: 1;
-            padding: 8px;
+            padding: 6px 10px;
             background: var(--btn-bg);
             border: 1px solid var(--line-2);
             border-radius: 8px;
@@ -480,24 +474,12 @@
             <label for="pass">WiFi passphrase</label>
             <input type="password" id="pass" placeholder="••••••••" value="qwertyui">
 
-            <div id="hostIpRow">
-                <label for="hostSelect">Select Host</label>
-                <select id="hostSelect" onchange="selectHost(this.value)"></select>
-
-                <div class="host-input-group">
-                    <div>
-                        <label for="hostName">Name</label>
-                        <input type="text" id="hostName" placeholder="Living Room" oninput="saveCurrentHostDetails()">
-                    </div>
-                    <div>
-                        <label for="hostIp">Host IP / Domain</label>
-                        <input type="text" id="hostIp" placeholder="tinydj.local" oninput="saveCurrentHostDetails()">
-                    </div>
+            <div id="hostSection">
+                <label>Manage Hosts</label>
+                <div id="hostListContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;">
+                    <!-- Populated dynamically with all hosts -->
                 </div>
-                <div class="host-actions">
-                    <button class="btn-small" onclick="addNewHost()">+ Add New Host</button>
-                    <button class="btn-small is-danger" onclick="deleteCurrentHost()">Delete Host</button>
-                </div>
+                <button class="btn-small" onclick="addNewHost()" style="width: 100%; margin-bottom: 14px; padding: 10px;">+ Add New Host</button>
             </div>
 
             <label>Show on remote</label>
@@ -525,10 +507,9 @@
     </div>
 
     <script>
-        const hostIpInput = document.getElementById('hostIp');
-        const hostNameInput = document.getElementById('hostName');
-        const hostSelect = document.getElementById('hostSelect');
         const mainHostSelect = document.getElementById('mainHostSelect');
+        const hostSection = document.getElementById('hostSection');
+        const hostListContainer = document.getElementById('hostListContainer');
         const syncBtn = document.getElementById('syncBtn');
         const castUrlInput = document.getElementById('castUrl');
         const seekSlider = document.getElementById('seekSlider');
@@ -569,8 +550,8 @@
             if (!hosts.some(h => h.id === activeHostId)) {
                 activeHostId = hosts[0].id;
             }
-            renderHostDropdowns();
-            populateHostForm();
+            renderHostList();
+            updateLinks(getActiveHost().ip);
         }
 
         function saveHosts() {
@@ -578,25 +559,41 @@
             localStorage.setItem('tinyDjActiveHostId', activeHostId);
         }
 
-        function renderHostDropdowns() {
+        function renderHostList() {
+            // Render all hosts in the settings modal list
+            hostListContainer.innerHTML = hosts.map((h, index) => {
+                const isActive = h.id === activeHostId;
+                return `
+                    <div style="background: #000; border: 1px solid ${isActive ? 'var(--text-2)' : 'var(--line)'}; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 11px; font-weight: 700; color: ${isActive ? 'var(--ok)' : 'var(--muted)'};">
+                                ${isActive ? '● Active Host' : 'Host ' + (index + 1)}
+                            </span>
+                            <div style="display: flex; gap: 6px;">
+                                ${!isActive ? `<button class="btn-small" style="padding: 2px 8px; font-size: 11px;" onclick="selectHost('${h.id}')">Use</button>` : ''}
+                                ${hosts.length > 1 ? `<button class="btn-small is-danger" style="padding: 2px 8px; font-size: 11px;" onclick="deleteHost('${h.id}')">Delete</button>` : ''}
+                            </div>
+                        </div>
+                        <div class="host-input-group">
+                            <div>
+                                <label style="font-size: 10px; margin-bottom: 2px;">Name</label>
+                                <input type="text" value="${h.name || ''}" placeholder="Living Room" onchange="updateHostField('${h.id}', 'name', this.value)" style="margin-bottom: 0 !important; font-size: 13px; padding: 8px 10px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; margin-bottom: 2px;">IP / Domain</label>
+                                <input type="text" value="${h.ip || ''}" placeholder="tinydj.local" onchange="updateHostField('${h.id}', 'ip', this.value)" style="margin-bottom: 0 !important; font-size: 13px; padding: 8px 10px;">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Update main card dropdown options
             const optionsHtml = hosts.map(h => 
                 `<option value="${h.id}">${h.name ? h.name + ' (' + h.ip + ')' : h.ip}</option>`
             ).join('');
-
-            hostSelect.innerHTML = optionsHtml;
             mainHostSelect.innerHTML = optionsHtml;
-
-            hostSelect.value = activeHostId;
             mainHostSelect.value = activeHostId;
-        }
-
-        function populateHostForm() {
-            const current = getActiveHost();
-            if (current) {
-                hostNameInput.value = current.name || '';
-                hostIpInput.value = current.ip || '';
-                updateLinks(current.ip);
-            }
         }
 
         function getActiveHost() {
@@ -606,43 +603,44 @@
         function selectHost(id) {
             activeHostId = id;
             saveHosts();
-            renderHostDropdowns();
-            populateHostForm();
+            renderHostList();
+            updateLinks(getActiveHost().ip);
             fetchStatus();
         }
 
-        function saveCurrentHostDetails() {
-            const current = getActiveHost();
-            if (current) {
-                current.name = hostNameInput.value.trim();
-                current.ip = hostIpInput.value.trim();
+        function updateHostField(id, field, val) {
+            const h = hosts.find(item => item.id === id);
+            if (h) {
+                h[field] = val.trim();
                 saveHosts();
-                renderHostDropdowns();
-                updateLinks(current.ip);
+                renderHostList();
+                if (id === activeHostId) {
+                    updateLinks(h.ip);
+                }
             }
         }
 
         function addNewHost() {
             const newId = 'host_' + Date.now();
-            const newHost = { id: newId, name: 'New Host', ip: 'tinydj.local' };
-            hosts.push(newHost);
+            hosts.push({ id: newId, name: 'New Host', ip: 'tinydj.local' });
             activeHostId = newId;
             saveHosts();
-            renderHostDropdowns();
-            populateHostForm();
-            hostNameInput.focus();
+            renderHostList();
+            updateLinks(getActiveHost().ip);
             fetchStatus();
         }
 
-        function deleteCurrentHost() {
+        function deleteHost(id) {
             if (hosts.length <= 1) {
                 return updateStatus("Cannot delete only host", "bad");
             }
-            hosts = hosts.filter(h => h.id !== activeHostId);
-            activeHostId = hosts[0].id;
+            hosts = hosts.filter(h => h.id !== id);
+            if (activeHostId === id) {
+                activeHostId = hosts[0].id;
+            }
             saveHosts();
-            renderHostDropdowns();
-            populateHostForm();
+            renderHostList();
+            updateLinks(getActiveHost().ip);
             fetchStatus();
         }
 
@@ -651,8 +649,8 @@
             if (current) {
                 current.ip = ip;
                 saveHosts();
-                renderHostDropdowns();
-                populateHostForm();
+                renderHostList();
+                updateLinks(ip);
             }
         }
 
@@ -820,6 +818,7 @@
             updateSeekContainerVisibility();
 
             mainHostSelect.parentElement.classList.toggle('hidden', !showHostIp);
+            hostSection.classList.toggle('hidden', !showHostIp);
 
             const bottomBar = document.getElementById('bottomBar');
             bottomBar.classList.toggle('hidden', !showCast);
