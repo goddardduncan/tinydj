@@ -415,6 +415,7 @@
         <div class="nav-group">
             <a id="bit-link" href="#" target="_blank" class="nav-btn">Transfers</a>
             <a id="box-link" href="#" target="_blank" class="nav-btn">TreenFlix</a>
+            <a id="ht-link" href="#" target="_blank" class="nav-btn">tinyaudio</a>
         </div>
     </div>
 
@@ -840,6 +841,7 @@
             if (ip && ip.includes('.')) {
                 document.getElementById('box-link').href = `http://${ip}:8303`;
                 document.getElementById('bit-link').href = `http://${ip}:3030`;
+                document.getElementById('ht-link').href = `http://${ip}:8222`;
             }
         }
 
